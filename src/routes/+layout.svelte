@@ -17,16 +17,18 @@
 	import { FacebookSolid, GithubSolid, DiscordSolid, TwitterSolid } from 'flowbite-svelte-icons'
 </script>
 
+<link rel="stylesheet" href="" />
+
 <div class="relative px-8 rounded-md">
 	<Navbar class="fixed start-0 top-0 z-20 w-full border-b px-2 py-2.5 sm:px-4" color="primary">
 		<NavBrand href="/">
 			<img
-				src="/images/flowbite-svelte-icon-logo.svg"
+				src="construction.svg"
 				class="me-3 h-6 sm:h-9"
-				alt="Flowbite Logo"
+				alt="Construction Icon"
 			/>
 			<span class="self-center whitespace-nowrap text-xl font-semibold dark:text-white"
-				>Flowbite</span
+				>Under Construction</span
 			>
 		</NavBrand>
 		<NavHamburger color="primary" />

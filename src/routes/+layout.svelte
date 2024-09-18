@@ -15,6 +15,8 @@
 		FooterIcon
 	} from 'flowbite-svelte'
 	import { FacebookSolid, GithubSolid, DiscordSolid, TwitterSolid } from 'flowbite-svelte-icons'
+	import { inject } from '@vercel/analytics'
+	inject()
 </script>
 
 <link rel="stylesheet" href="" />

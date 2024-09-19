@@ -11,6 +11,11 @@
 	<Heading tag="h1" class="mt-28 text-3xl md:mt-40 md:text-5xl"
 		>Under Construction
 		<br />
+		<img
+			src="construction.svg"
+			class=" mx-auto mt-8 flex h-16 justify-start sm:ml-0 sm:h-20 md:mx-auto md:h-32 md:justify-center"
+			alt="Construction Icon"
+		/>
 		<br />
 		<Secondary class="text-xl md:text-2xl">This website is currently a work in progress.</Secondary>
 		<br />

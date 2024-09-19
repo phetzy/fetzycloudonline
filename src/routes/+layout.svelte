@@ -33,7 +33,9 @@
 <div class="relative rounded-md px-8">
 	<Navbar class="fixed start-0 top-0 z-20 w-full border-b px-2 py-2.5 sm:px-4" color="primary">
 		<NavBrand href="/">
+			<!--
 			<img src="construction.svg" class="me-3 h-6 sm:h-9" alt="Construction Icon" />
+			-->
 			<Heading
 				tag="h1"
 				class="self-center whitespace-nowrap text-lg font-semibold dark:text-white md:text-3xl"
@@ -64,13 +66,14 @@
 			<FooterLink color="primary">Built with:</FooterLink>
 			<FooterLink color="primary" href="https://kit.svelte.dev">
 				<FooterIcon>
-					<img src="/web/icons8-svelte-doodle-32.png" class="w-5" alt="Svelte Icon" />
+					<img src="/web/icons8-svelte-doodle-32.png" class="w-5" alt="Svelte Logo" />
 				</FooterIcon>
 			</FooterLink>
-			<FooterLink color="primary" href="https://flowbite-svelte.com">
+			<FooterLink color="primary" href="https://flowbite-svelte.com" alt="Flowbite Svelte Logo">
 				<FooterIcon>
 					<FlowbiteSolid
 						class="h-5 w-5 text-amber-600 hover:text-amber-800 dark:text-amber-500 dark:hover:text-amber-400"
+						alt="Flowbite Svelte Logo"
 					/>
 				</FooterIcon>
 			</FooterLink>
@@ -78,6 +81,7 @@
 				<FooterIcon>
 					<TailwindSolid
 						class="h-5 w-5 text-cyan-500 hover:text-cyan-600 dark:hover:text-cyan-200"
+						alt="TailwindCSS Logo"
 					/>
 				</FooterIcon>
 			</FooterLink>

@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
 	import '../app.css'
 	import {
 		DarkMode,
@@ -11,7 +11,9 @@
 		FooterCopyright,
 		FooterLink,
 		FooterLinkGroup,
-		FooterIcon
+		FooterIcon,
+		Heading,
+		Badge
 	} from 'flowbite-svelte'
 	import {
 		LinkedinSolid,
@@ -32,9 +34,12 @@
 	<Navbar class="fixed start-0 top-0 z-20 w-full border-b px-2 py-2.5 sm:px-4" color="primary">
 		<NavBrand href="/">
 			<img src="construction.svg" class="me-3 h-6 sm:h-9" alt="Construction Icon" />
-			<span class="self-center whitespace-nowrap text-xl font-semibold dark:text-white"
-				>Under Construction</span
+			<Heading
+				tag="h1"
+				class="self-center whitespace-nowrap text-lg font-semibold dark:text-white md:text-3xl"
+				>Fetzy Cloud</Heading
 			>
+			<Badge class="text-m ms-2 font-semibold md:text-xl">Online</Badge>
 		</NavBrand>
 		<NavHamburger color="primary" />
 		<NavUl>

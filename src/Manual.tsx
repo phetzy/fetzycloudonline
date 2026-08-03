@@ -1,8 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { Overlay, type OverlayRow } from './components/Overlay'
 import { Section } from './components/Section'
 import { StatusBar } from './components/StatusBar'
 import { DetailRow, LabelGrid, LabelRow, SubsystemRow } from './components/rows'
-import { EMAIL, PLATFORM_DETAILS, SECTIONS, STACK, SUBSYSTEMS, TRANSFER_DETAILS } from './content'
+import {
+	EMAIL,
+	HELP,
+	PLATFORM_DETAILS,
+	SECTIONS,
+	STACK,
+	SUBSYSTEMS,
+	TRANSFER_DETAILS
+} from './content'
 import { useManualNav } from './hooks/useManualNav'
 import { useScrollPercent } from './hooks/useScrollPercent'
 import { useSearch } from './hooks/useSearch'
@@ -12,13 +21,29 @@ export function Manual() {
 	const searchRef = useRef<HTMLInputElement>(null)
 	const percent = useScrollPercent()
 	const { idx, goTo } = useManualNav()
-	const noop = () => {}
 
 	const [searching, setSearching] = useState(false)
 	const search = useSearch(contentRef)
+	const [overlay, setOverlay] = useState<'help' | 'toc' | null>(null)
+
+	const tocRows: OverlayRow[] = SECTIONS.map((section, n) => ({
+		key: String(n + 1).padStart(2, '0'),
+		label: section.label
+	}))
+	const overlayRows = overlay === 'toc' ? tocRows : HELP
+	const overlayTitle = overlay === 'toc' ? 'TABLE OF CONTENTS' : 'KEYS'
+
+	const jump = useCallback(
+		(i: number) => {
+			setOverlay(null)
+			goTo(i)
+		},
+		[goTo]
+	)
 
 	const startSearch = useCallback(() => {
 		setSearching(true)
+		setOverlay(null)
 		// The input mounts in this same commit; focus after paint.
 		queueMicrotask(() => searchRef.current?.focus())
 	}, [])
@@ -34,6 +59,7 @@ export function Manual() {
 					event.preventDefault()
 					setSearching(false)
 					search.clear()
+					setOverlay(null)
 					break
 				case '/':
 					event.preventDefault()
@@ -49,27 +75,35 @@ export function Manual() {
 					break
 				case 'j':
 					event.preventDefault()
-					goTo(idx + 1)
+					jump(idx + 1)
 					break
 				case 'k':
 					event.preventDefault()
-					goTo(idx - 1)
+					jump(idx - 1)
 					break
 				case 'g':
 					event.preventDefault()
-					goTo(0)
+					jump(0)
 					break
 				case 'G':
 				case 'q':
 					event.preventDefault()
-					goTo(SECTIONS.length - 1)
+					jump(SECTIONS.length - 1)
+					break
+				case 't':
+					event.preventDefault()
+					setOverlay((current) => (current === 'toc' ? null : 'toc'))
+					break
+				case '?':
+					event.preventDefault()
+					setOverlay((current) => (current === 'help' ? null : 'help'))
 					break
 			}
 		}
 
 		window.addEventListener('keydown', onKey)
 		return () => window.removeEventListener('keydown', onKey)
-	}, [goTo, idx, search, startSearch])
+	}, [idx, jump, search, startSearch])
 
 	return (
 		<div className="relative min-h-screen bg-ground px-[clamp(14px,4vw,48px)] pb-[108px] font-mono text-[14.5px] leading-[1.65] text-body">
@@ -287,6 +321,10 @@ export function Manual() {
 				</main>
 			</div>
 
+			{overlay && (
+				<Overlay title={overlayTitle} rows={overlayRows} onClose={() => setOverlay(null)} />
+			)}
+
 			<StatusBar
 				current={SECTIONS[idx].label}
 				position={`${idx + 1}/${SECTIONS.length}`}
@@ -306,11 +344,11 @@ export function Manual() {
 						search.clear()
 					}
 				}}
-				onPrev={() => goTo(idx - 1)}
-				onNext={() => goTo(idx + 1)}
-				onToc={noop}
+				onPrev={() => jump(idx - 1)}
+				onNext={() => jump(idx + 1)}
+				onToc={() => setOverlay((current) => (current === 'toc' ? null : 'toc'))}
 				onFind={startSearch}
-				onHelp={noop}
+				onHelp={() => setOverlay((current) => (current === 'help' ? null : 'help'))}
 			/>
 		</div>
 	)

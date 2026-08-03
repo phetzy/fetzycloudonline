@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Manual } from './Manual'
-import { SECTIONS } from './content'
+import { HELP, SECTIONS } from './content'
 
 test('renders the manual page header', () => {
 	render(<Manual />)
@@ -118,4 +118,46 @@ test('escape closes search and restores the section readout', async () => {
 
 	expect(screen.queryByLabelText('Search the manual')).not.toBeInTheDocument()
 	expect(screen.getByTestId('position')).toHaveTextContent('1/11')
+})
+
+test('t opens the table of contents with all eleven sections', async () => {
+	const user = userEvent.setup()
+	render(<Manual />)
+
+	await user.keyboard('t')
+	const dialog = screen.getByRole('dialog')
+	expect(dialog).toHaveTextContent('TABLE OF CONTENTS')
+	expect(dialog).toHaveTextContent('01')
+	expect(dialog).toHaveTextContent('11')
+})
+
+test('t toggles the table of contents closed again', async () => {
+	const user = userEvent.setup()
+	render(<Manual />)
+
+	await user.keyboard('t')
+	expect(screen.getByRole('dialog')).toBeInTheDocument()
+	await user.keyboard('t')
+	expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+})
+
+test('question mark opens key help listing every binding', async () => {
+	const user = userEvent.setup()
+	render(<Manual />)
+
+	await user.keyboard('?')
+	const dialog = screen.getByRole('dialog')
+	expect(dialog).toHaveTextContent('KEYS')
+	for (const row of HELP) {
+		expect(dialog).toHaveTextContent(row.label)
+	}
+})
+
+test('escape closes an open overlay', async () => {
+	const user = userEvent.setup()
+	render(<Manual />)
+
+	await user.keyboard('?')
+	await user.keyboard('{Escape}')
+	expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 })

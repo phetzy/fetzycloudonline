@@ -1,2 +1,15 @@
+# Not a real monorepo. This file exists only to allow esbuild's install script
+# to run: pnpm 10+ blocks build scripts by default, and vite build fails without
+# esbuild's platform binary.
+#
+# `packages` is required because pnpm 9 — which Vercel pins for this project
+# based on its creation date — treats the presence of this file as declaring a
+# workspace and fails with "packages field missing or empty" without it.
+#
+# `allowBuilds` is the pnpm 11 spelling. pnpm 9 runs build scripts
+# unconditionally and needs neither key.
+packages:
+  - '.'
+
 allowBuilds:
   esbuild: true

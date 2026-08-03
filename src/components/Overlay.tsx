@@ -1,3 +1,5 @@
+import { useEffect, useRef } from 'react'
+
 export type OverlayRow = { key: string; label: string }
 
 export function Overlay({
@@ -9,13 +11,25 @@ export function Overlay({
 	rows: OverlayRow[]
 	onClose: () => void
 }) {
+	const panelRef = useRef<HTMLDivElement>(null)
+
+	useEffect(() => {
+		const previouslyFocused = document.activeElement as HTMLElement | null
+		panelRef.current?.focus()
+		return () => {
+			previouslyFocused?.focus()
+		}
+	}, [])
+
 	return (
 		<div
+			ref={panelRef}
+			tabIndex={-1}
 			role="dialog"
 			aria-modal="true"
 			aria-label={title}
 			onClick={onClose}
-			className="fixed inset-0 z-[60] grid place-items-center bg-[rgba(8,8,9,0.86)] p-5"
+			className="fixed inset-0 z-[60] grid place-items-center bg-[rgba(8,8,9,0.86)] p-5 outline-none"
 		>
 			<div
 				onClick={(event) => event.stopPropagation()}

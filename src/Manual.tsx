@@ -49,6 +49,18 @@ export function Manual() {
 		queueMicrotask(() => searchRef.current?.focus())
 	}, [])
 
+	const toggleToc = useCallback(() => {
+		setSearching(false)
+		search.clear()
+		setOverlay((current) => (current === 'toc' ? null : 'toc'))
+	}, [search])
+
+	const toggleHelp = useCallback(() => {
+		setSearching(false)
+		search.clear()
+		setOverlay((current) => (current === 'help' ? null : 'help'))
+	}, [search])
+
 	useEffect(() => {
 		const onKey = (event: KeyboardEvent) => {
 			if (event.metaKey || event.ctrlKey || event.altKey) return
@@ -93,18 +105,18 @@ export function Manual() {
 					break
 				case 't':
 					event.preventDefault()
-					setOverlay((current) => (current === 'toc' ? null : 'toc'))
+					toggleToc()
 					break
 				case '?':
 					event.preventDefault()
-					setOverlay((current) => (current === 'help' ? null : 'help'))
+					toggleHelp()
 					break
 			}
 		}
 
 		window.addEventListener('keydown', onKey)
 		return () => window.removeEventListener('keydown', onKey)
-	}, [idx, jump, search, startSearch])
+	}, [idx, jump, search, startSearch, toggleToc, toggleHelp])
 
 	return (
 		<div className="relative min-h-screen bg-ground px-[clamp(14px,4vw,48px)] pb-[108px] font-mono text-[14.5px] leading-[1.65] text-body">
@@ -123,7 +135,7 @@ export function Manual() {
 							software engineer
 							<span
 								aria-hidden="true"
-								className="ml-[0.3em] inline-block h-[1em] w-[0.6em] animate-blink bg-ph align-[-0.12em]"
+								className="ml-[0.3em] inline-block h-[1em] w-[0.6em] animate-blink bg-ph align-[-0.12em] motion-reduce:animate-none"
 							/>
 						</h1>
 						<p className="max-w-[74ch] text-pretty text-muted">
@@ -348,9 +360,9 @@ export function Manual() {
 				}}
 				onPrev={() => jump(idx - 1)}
 				onNext={() => jump(idx + 1)}
-				onToc={() => setOverlay((current) => (current === 'toc' ? null : 'toc'))}
+				onToc={toggleToc}
 				onFind={startSearch}
-				onHelp={() => setOverlay((current) => (current === 'help' ? null : 'help'))}
+				onHelp={toggleHelp}
 			/>
 		</div>
 	)

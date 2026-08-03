@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
+import { scrollBehavior } from './prefersReducedMotion'
 
 const SELECTOR = 'p, h1, h2, h3, span, a'
 
@@ -32,7 +33,7 @@ export function useSearch(contentRef: RefObject<HTMLElement | null>) {
 			highlighted.current = el
 			window.scrollTo({
 				top: el.getBoundingClientRect().top + window.scrollY - 120,
-				behavior: 'smooth'
+				behavior: scrollBehavior()
 			})
 		},
 		[clearHighlight]

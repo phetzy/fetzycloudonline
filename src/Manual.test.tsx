@@ -161,3 +161,53 @@ test('escape closes an open overlay', async () => {
 	await user.keyboard('{Escape}')
 	expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 })
+
+test('opening the toc via keyboard while searching closes search', async () => {
+	const user = userEvent.setup()
+	render(<Manual />)
+
+	await user.keyboard('/')
+	expect(screen.getByLabelText('Search the manual')).toBeInTheDocument()
+
+	// Move focus off the search input first: the nav keydown handler
+	// deliberately ignores keys typed into the input itself.
+	screen.getByLabelText('Search the manual').blur()
+	await user.keyboard('t')
+	expect(screen.getByRole('dialog')).toBeInTheDocument()
+	expect(screen.queryByLabelText('Search the manual')).not.toBeInTheDocument()
+})
+
+test('opening key help via keyboard while searching closes search', async () => {
+	const user = userEvent.setup()
+	render(<Manual />)
+
+	await user.keyboard('/')
+	expect(screen.getByLabelText('Search the manual')).toBeInTheDocument()
+
+	screen.getByLabelText('Search the manual').blur()
+	await user.keyboard('?')
+	expect(screen.getByRole('dialog')).toBeInTheDocument()
+	expect(screen.queryByLabelText('Search the manual')).not.toBeInTheDocument()
+})
+
+test('clicking the toc button while searching closes search', async () => {
+	const user = userEvent.setup()
+	render(<Manual />)
+
+	await user.keyboard('/')
+	expect(screen.getByLabelText('Search the manual')).toBeInTheDocument()
+
+	await user.click(screen.getByRole('button', { name: 't toc' }))
+	expect(screen.getByRole('dialog')).toBeInTheDocument()
+	expect(screen.queryByLabelText('Search the manual')).not.toBeInTheDocument()
+})
+
+test('t still toggles the toc closed when reopened while not searching', async () => {
+	const user = userEvent.setup()
+	render(<Manual />)
+
+	await user.keyboard('t')
+	expect(screen.getByRole('dialog')).toBeInTheDocument()
+	await user.keyboard('t')
+	expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+})

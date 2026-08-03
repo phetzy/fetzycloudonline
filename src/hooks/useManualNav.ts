@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { SECTIONS } from '../content'
+import { scrollBehavior } from './prefersReducedMotion'
 
 /** Milliseconds after an explicit jump during which observer updates are ignored. */
 const LOCK_MS = 900
@@ -14,7 +15,7 @@ export function useManualNav() {
 		if (el) {
 			window.scrollTo({
 				top: el.getBoundingClientRect().top + window.scrollY - 24,
-				behavior: 'smooth'
+				behavior: scrollBehavior()
 			})
 		}
 		lockUntil.current = Date.now() + LOCK_MS

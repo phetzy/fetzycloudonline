@@ -1,16 +1,48 @@
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { Section } from './components/Section'
 import { StatusBar } from './components/StatusBar'
 import { DetailRow, LabelGrid, LabelRow, SubsystemRow } from './components/rows'
 import { EMAIL, PLATFORM_DETAILS, SECTIONS, STACK, SUBSYSTEMS, TRANSFER_DETAILS } from './content'
+import { useManualNav } from './hooks/useManualNav'
 import { useScrollPercent } from './hooks/useScrollPercent'
 
 export function Manual() {
 	const contentRef = useRef<HTMLElement>(null)
 	const searchRef = useRef<HTMLInputElement>(null)
 	const percent = useScrollPercent()
-	const idx = 0
+	const { idx, goTo } = useManualNav()
 	const noop = () => {}
+
+	useEffect(() => {
+		const onKey = (event: KeyboardEvent) => {
+			if (event.metaKey || event.ctrlKey || event.altKey) return
+			const tag = (event.target as HTMLElement | null)?.tagName?.toLowerCase()
+			if (tag === 'input' || tag === 'textarea') return
+
+			switch (event.key) {
+				case 'j':
+					event.preventDefault()
+					goTo(idx + 1)
+					break
+				case 'k':
+					event.preventDefault()
+					goTo(idx - 1)
+					break
+				case 'g':
+					event.preventDefault()
+					goTo(0)
+					break
+				case 'G':
+				case 'q':
+					event.preventDefault()
+					goTo(SECTIONS.length - 1)
+					break
+			}
+		}
+
+		window.addEventListener('keydown', onKey)
+		return () => window.removeEventListener('keydown', onKey)
+	}, [goTo, idx])
 
 	return (
 		<div className="relative min-h-screen bg-ground px-[clamp(14px,4vw,48px)] pb-[108px] font-mono text-[14.5px] leading-[1.65] text-body">
@@ -238,8 +270,8 @@ export function Manual() {
 				searchRef={searchRef}
 				onQueryChange={noop}
 				onSearchKeyDown={noop}
-				onPrev={noop}
-				onNext={noop}
+				onPrev={() => goTo(idx - 1)}
+				onNext={() => goTo(idx + 1)}
 				onToc={noop}
 				onFind={noop}
 				onHelp={noop}

@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { Manual } from './Manual'
 import { SECTIONS } from './content'
 
@@ -41,4 +42,47 @@ test('contact links point at the right destinations', () => {
 		'href',
 		'https://linkedin.com/in/fetzy'
 	)
+})
+
+test('j and k move between sections', async () => {
+	const user = userEvent.setup()
+	render(<Manual />)
+	expect(screen.getByTestId('current-section')).toHaveTextContent('NAME')
+
+	await user.keyboard('j')
+	expect(screen.getByTestId('position')).toHaveTextContent('2/11')
+	expect(screen.getByTestId('current-section')).toHaveTextContent('SYNOPSIS')
+
+	await user.keyboard('j')
+	expect(screen.getByTestId('position')).toHaveTextContent('3/11')
+
+	await user.keyboard('k')
+	expect(screen.getByTestId('position')).toHaveTextContent('2/11')
+})
+
+test('g and G jump to the first and last section', async () => {
+	const user = userEvent.setup()
+	render(<Manual />)
+
+	await user.keyboard('{Shift>}G{/Shift}')
+	expect(screen.getByTestId('position')).toHaveTextContent('11/11')
+
+	await user.keyboard('g')
+	expect(screen.getByTestId('position')).toHaveTextContent('1/11')
+})
+
+test('q jumps to SEE ALSO', async () => {
+	const user = userEvent.setup()
+	render(<Manual />)
+
+	await user.keyboard('q')
+	expect(screen.getByTestId('current-section')).toHaveTextContent('SEE ALSO')
+})
+
+test('navigation keys are ignored while a modifier is held', async () => {
+	const user = userEvent.setup()
+	render(<Manual />)
+
+	await user.keyboard('{Control>}j{/Control}')
+	expect(screen.getByTestId('position')).toHaveTextContent('1/11')
 })

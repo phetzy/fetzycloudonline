@@ -86,3 +86,36 @@ test('navigation keys are ignored while a modifier is held', async () => {
 	await user.keyboard('{Control>}j{/Control}')
 	expect(screen.getByTestId('position')).toHaveTextContent('1/11')
 })
+
+test('slash opens search and typing reports the match count', async () => {
+	const user = userEvent.setup()
+	render(<Manual />)
+
+	await user.keyboard('/')
+	const input = screen.getByLabelText('Search the manual')
+	expect(input).toHaveFocus()
+
+	await user.type(input, 'geocoding')
+	expect(screen.getByTestId('match-label')).toHaveTextContent(/^\d+\/\d+$/)
+})
+
+test('search reports no match for a query that is absent', async () => {
+	const user = userEvent.setup()
+	render(<Manual />)
+
+	await user.keyboard('/')
+	await user.type(screen.getByLabelText('Search the manual'), 'zzzzqqq')
+	expect(screen.getByTestId('match-label')).toHaveTextContent('no match')
+})
+
+test('escape closes search and restores the section readout', async () => {
+	const user = userEvent.setup()
+	render(<Manual />)
+
+	await user.keyboard('/')
+	await user.type(screen.getByLabelText('Search the manual'), 'geocoding')
+	await user.keyboard('{Escape}')
+
+	expect(screen.queryByLabelText('Search the manual')).not.toBeInTheDocument()
+	expect(screen.getByTestId('position')).toHaveTextContent('1/11')
+})

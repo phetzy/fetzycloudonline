@@ -1,10 +1,11 @@
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Section } from './components/Section'
 import { StatusBar } from './components/StatusBar'
 import { DetailRow, LabelGrid, LabelRow, SubsystemRow } from './components/rows'
 import { EMAIL, PLATFORM_DETAILS, SECTIONS, STACK, SUBSYSTEMS, TRANSFER_DETAILS } from './content'
 import { useManualNav } from './hooks/useManualNav'
 import { useScrollPercent } from './hooks/useScrollPercent'
+import { useSearch } from './hooks/useSearch'
 
 export function Manual() {
 	const contentRef = useRef<HTMLElement>(null)
@@ -13,6 +14,15 @@ export function Manual() {
 	const { idx, goTo } = useManualNav()
 	const noop = () => {}
 
+	const [searching, setSearching] = useState(false)
+	const search = useSearch(contentRef)
+
+	const startSearch = useCallback(() => {
+		setSearching(true)
+		// The input mounts in this same commit; focus after paint.
+		queueMicrotask(() => searchRef.current?.focus())
+	}, [])
+
 	useEffect(() => {
 		const onKey = (event: KeyboardEvent) => {
 			if (event.metaKey || event.ctrlKey || event.altKey) return
@@ -20,6 +30,23 @@ export function Manual() {
 			if (tag === 'input' || tag === 'textarea') return
 
 			switch (event.key) {
+				case 'Escape':
+					event.preventDefault()
+					setSearching(false)
+					search.clear()
+					break
+				case '/':
+					event.preventDefault()
+					startSearch()
+					break
+				case 'n':
+					event.preventDefault()
+					search.showMatch(1)
+					break
+				case 'N':
+					event.preventDefault()
+					search.showMatch(-1)
+					break
 				case 'j':
 					event.preventDefault()
 					goTo(idx + 1)
@@ -42,7 +69,7 @@ export function Manual() {
 
 		window.addEventListener('keydown', onKey)
 		return () => window.removeEventListener('keydown', onKey)
-	}, [goTo, idx])
+	}, [goTo, idx, search, startSearch])
 
 	return (
 		<div className="relative min-h-screen bg-ground px-[clamp(14px,4vw,48px)] pb-[108px] font-mono text-[14.5px] leading-[1.65] text-body">
@@ -264,16 +291,25 @@ export function Manual() {
 				current={SECTIONS[idx].label}
 				position={`${idx + 1}/${SECTIONS.length}`}
 				percent={percent}
-				searching={false}
-				query=""
-				matchLabel="enter ↵ next"
+				searching={searching}
+				query={search.query}
+				matchLabel={search.matchLabel}
 				searchRef={searchRef}
-				onQueryChange={noop}
-				onSearchKeyDown={noop}
+				onQueryChange={search.setQuery}
+				onSearchKeyDown={(event) => {
+					if (event.key === 'Enter') {
+						event.preventDefault()
+						search.showMatch(event.shiftKey ? -1 : 1)
+					} else if (event.key === 'Escape') {
+						event.preventDefault()
+						setSearching(false)
+						search.clear()
+					}
+				}}
 				onPrev={() => goTo(idx - 1)}
 				onNext={() => goTo(idx + 1)}
 				onToc={noop}
-				onFind={noop}
+				onFind={startSearch}
 				onHelp={noop}
 			/>
 		</div>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { CopyButton } from './components/CopyButton'
 import { Overlay, type OverlayRow } from './components/Overlay'
 import { Section } from './components/Section'
 import { StatusBar } from './components/StatusBar'
@@ -287,6 +288,7 @@ export function Manual() {
 								>
 									{EMAIL}
 								</a>
+								<CopyButton value={EMAIL} />
 							</span>
 							<span>
 								<span className="inline-block w-[12ch] text-dim">github</span>

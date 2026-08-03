@@ -14,5 +14,12 @@
 		"isolatedModules": true,
 		"types": ["vitest/globals", "@testing-library/jest-dom"]
 	},
-	"include": ["src", "tests", "vite.config.ts", "tailwind.config.ts", "playwright.config.ts"]
+	"include": [
+		"src",
+		"tests",
+		"vite.config.ts",
+		"tailwind.config.ts",
+		"playwright.config.ts",
+		"prerender.ts"
+	]
 }

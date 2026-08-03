@@ -47,7 +47,7 @@ export function StatusBar({
 							onKeyDown={onSearchKeyDown}
 							placeholder="search the manual"
 							aria-label="Search the manual"
-							className="min-w-0 flex-1 border-0 bg-transparent font-mono text-[13px] text-bright outline-none placeholder:text-dim"
+							className="min-w-0 flex-1 border-0 bg-transparent font-mono text-[13px] text-bright outline-none placeholder:text-dim focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-ph"
 						/>
 						<span data-testid="match-label" className="whitespace-nowrap text-dim">
 							{matchLabel}

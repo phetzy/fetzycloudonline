@@ -26,7 +26,7 @@ export function LabelRow({ label, children }: { label: string; children: ReactNo
 
 export function DetailRow({ label, body }: Detail) {
 	return (
-		<div className="grid grid-cols-[minmax(0,16ch)_minmax(0,1fr)] items-start gap-x-4 border-t border-rule-faint py-2">
+		<div className="grid grid-cols-1 items-start gap-x-4 gap-y-1 border-t border-rule-faint py-2 sm:grid-cols-[minmax(0,16ch)_minmax(0,1fr)]">
 			<h3 className="text-[14.5px] font-medium text-sky">{label}</h3>
 			<p className="text-pretty text-muted">{body}</p>
 		</div>

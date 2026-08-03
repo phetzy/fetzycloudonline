@@ -206,7 +206,7 @@ export function Manual() {
 							<a
 								href="https://mapwright.io"
 								target="_blank"
-								rel="noopener"
+								rel="noopener noreferrer"
 								className="text-ph no-underline hover:bg-ph hover:text-ground"
 							>
 								https://mapwright.io
@@ -215,7 +215,7 @@ export function Manual() {
 							<a
 								href="https://mapwright.io/docs"
 								target="_blank"
-								rel="noopener"
+								rel="noopener noreferrer"
 								className="text-ph no-underline hover:bg-ph hover:text-ground"
 							>
 								/docs
@@ -307,7 +307,7 @@ export function Manual() {
 								<a
 									href="https://github.com/phetzy"
 									target="_blank"
-									rel="noopener"
+									rel="noopener noreferrer"
 									className="text-ph no-underline hover:bg-ph hover:text-ground"
 								>
 									github.com/phetzy
@@ -318,7 +318,7 @@ export function Manual() {
 								<a
 									href="https://linkedin.com/in/fetzy"
 									target="_blank"
-									rel="noopener"
+									rel="noopener noreferrer"
 									className="text-ph no-underline hover:bg-ph hover:text-ground"
 								>
 									linkedin.com/in/fetzy

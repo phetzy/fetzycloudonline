@@ -87,6 +87,39 @@ test('navigation keys are ignored while a modifier is held', async () => {
 	expect(screen.getByTestId('position')).toHaveTextContent('1/11')
 })
 
+test('navigation keys are ignored while the meta key is held', async () => {
+	const user = userEvent.setup()
+	render(<Manual />)
+
+	await user.keyboard('{Meta>}j{/Meta}')
+	expect(screen.getByTestId('position')).toHaveTextContent('1/11')
+})
+
+test('navigation keys are ignored while the alt key is held', async () => {
+	const user = userEvent.setup()
+	render(<Manual />)
+
+	await user.keyboard('{Alt>}j{/Alt}')
+	expect(screen.getByTestId('position')).toHaveTextContent('1/11')
+})
+
+test('navigation keys are ignored while focus is in the search input', async () => {
+	const user = userEvent.setup()
+	render(<Manual />)
+
+	await user.keyboard('/')
+	const input = screen.getByLabelText('Search the manual')
+	expect(input).toHaveFocus()
+
+	// If the global handler didn't bail on the input focus, 'j' would be
+	// preventDefault-ed (navigation) instead of typed into the field.
+	await user.type(input, 'j')
+	expect(input).toHaveValue('j')
+
+	await user.keyboard('{Escape}')
+	expect(screen.getByTestId('position')).toHaveTextContent('1/11')
+})
+
 test('slash opens search and typing reports the match count', async () => {
 	const user = userEvent.setup()
 	render(<Manual />)

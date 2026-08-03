@@ -28,8 +28,9 @@ pnpm dev
 - `src/hooks/` — scroll percentage, section navigation, search
 - `src/components/` — section, row, status bar, overlay, and button primitives
 
-The design comes from `design_handoff_manual_site/`. Content is fixed: do not add
-projects, metrics, or details that are not in that reference.
+The design comes from an external design handoff that is not checked into this
+repo. Content is fixed: do not add projects, metrics, or details that are not
+in that reference.
 
 ## Deployment
 

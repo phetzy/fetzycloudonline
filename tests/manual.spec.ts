@@ -43,3 +43,13 @@ test('the table of contents lists all eleven sections and closes on scrim click'
 	await page.mouse.click(5, 5)
 	await expect(dialog).not.toBeVisible()
 })
+
+test('no horizontal overflow at a 375px viewport', async ({ page }) => {
+	await page.setViewportSize({ width: 375, height: 800 })
+	await page.goto('/')
+	const { scrollWidth, clientWidth } = await page.evaluate(() => ({
+		scrollWidth: document.documentElement.scrollWidth,
+		clientWidth: document.documentElement.clientWidth
+	}))
+	expect(scrollWidth).toBeLessThanOrEqual(clientWidth)
+})

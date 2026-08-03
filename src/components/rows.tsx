@@ -35,10 +35,10 @@ export function DetailRow({ label, body }: Detail) {
 
 export function SubsystemRow({ n, title, body }: Subsystem) {
 	return (
-		<div className="grid grid-cols-[4ch_minmax(0,26ch)_minmax(0,1fr)] items-baseline gap-x-3 py-[5px]">
+		<div className="grid grid-cols-[4ch_minmax(0,1fr)] items-baseline gap-x-3 py-[5px] sm:grid-cols-[4ch_minmax(0,26ch)_minmax(0,1fr)]">
 			<span className="text-dim">{n}</span>
 			<span className="text-bright">{title}</span>
-			<span className="text-pretty text-faint">{body}</span>
+			<span className="col-start-2 text-pretty text-faint sm:col-start-3">{body}</span>
 		</div>
 	)
 }

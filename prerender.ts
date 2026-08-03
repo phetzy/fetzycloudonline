@@ -6,7 +6,9 @@ import { Manual } from './src/Manual'
 const template = readFileSync('dist/index.html', 'utf8')
 const html = renderToString(createElement(Manual))
 
-writeFileSync(
-	'dist/index.html',
-	template.replace('<div id="root"></div>', `<div id="root">${html}</div>`)
-)
+const output = template.replace('<div id="root"></div>', `<div id="root">${html}</div>`)
+if (output === template) {
+	throw new Error('prerender: could not find #root placeholder in dist/index.html')
+}
+
+writeFileSync('dist/index.html', output)

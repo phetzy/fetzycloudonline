@@ -1,38 +1,36 @@
-# create-svelte
+# fetzycloudonline
 
-Everything you need to build a Svelte project, powered by [`create-svelte`](https://github.com/sveltejs/kit/tree/main/packages/create-svelte).
+David Fetzer's personal site — a single static page styled as a Unix man page
+rendered in a terminal pager.
 
-## Creating a project
-
-If you're seeing this, you've probably already done this step. Congrats!
-
-```bash
-# create a new project in the current directory
-npm create svelte@latest
-
-# create a new project in my-app
-npm create svelte@latest my-app
-```
-
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+## Development
 
 ```bash
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
+pnpm install
+pnpm dev
 ```
 
-## Building
+## Commands
 
-To create a production version of your app:
+| Command        | Description                                         |
+| -------------- | --------------------------------------------------- |
+| `pnpm dev`     | Vite dev server                                     |
+| `pnpm build`   | Type-check, bundle, and prerender to `dist/`        |
+| `pnpm preview` | Serve the production build                          |
+| `pnpm test`    | Vitest unit tests, then Playwright end-to-end tests |
+| `pnpm lint`    | Prettier check and ESLint                           |
+| `pnpm format`  | Rewrite files with Prettier                         |
 
-```bash
-npm run build
-```
+## Structure
 
-You can preview the production build with `npm run preview`.
+- `src/Manual.tsx` — the page: eleven sections and the keyboard wiring
+- `src/content.ts` — content for the repeating rows
+- `src/hooks/` — scroll percentage, section navigation, search
+- `src/components/` — section, row, status bar, overlay, and button primitives
 
-> To deploy your app, you may need to install an [adapter](https://kit.svelte.dev/docs/adapters) for your target environment.
+The design comes from `design_handoff_manual_site/`. Content is fixed: do not add
+projects, metrics, or details that are not in that reference.
+
+## Deployment
+
+Vercel, static build. No environment variables.

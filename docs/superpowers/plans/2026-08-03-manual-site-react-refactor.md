@@ -2117,8 +2117,16 @@ test('does nothing visible when the clipboard is unavailable', () => {
 })
 ```
 
-`vi.useFakeTimers()` is installed only after the click in the second test — installing it
-first would freeze the promise microtask queue that `writeText` resolves on.
+> **Corrected during execution.** This plan originally prescribed installing
+> `vi.useFakeTimers()` *after* the click, reasoning that installing it first would freeze
+> the promise microtask queue that `writeText` resolves on. That reasoning is false:
+> vitest's default `toFake` list covers only timer functions and `Date`, never
+> `queueMicrotask` or promise internals, so promise resolution is unaffected either way.
+> The prescribed ordering in fact fails deterministically — the `setTimeout` inside
+> `.then()` fires during the first `await act()`, binding to the real native timer, and
+> `@sinonjs/fake-timers` cannot adopt timers already scheduled before `install()`. The
+> shipped test installs fake timers **before** the click so the `setTimeout` is captured
+> by the fake clock. Both orderings were reproduced empirically during review.
 
 - [ ] **Step 2: Run the test to verify it fails**
 

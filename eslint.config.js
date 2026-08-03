@@ -1,33 +1,21 @@
-import js from '@eslint/js';
-import ts from 'typescript-eslint';
-import svelte from 'eslint-plugin-svelte';
-import prettier from 'eslint-config-prettier';
-import globals from 'globals';
+import js from '@eslint/js'
+import ts from 'typescript-eslint'
+import reactHooks from 'eslint-plugin-react-hooks'
+import prettier from 'eslint-config-prettier'
+import globals from 'globals'
 
 /** @type {import('eslint').Linter.Config[]} */
 export default [
 	js.configs.recommended,
 	...ts.configs.recommended,
-	...svelte.configs['flat/recommended'],
+	{
+		files: ['**/*.{ts,tsx}'],
+		plugins: { 'react-hooks': reactHooks },
+		rules: reactHooks.configs.recommended.rules,
+		languageOptions: {
+			globals: { ...globals.browser, ...globals.node }
+		}
+	},
 	prettier,
-	...svelte.configs['flat/prettier'],
-	{
-		languageOptions: {
-			globals: {
-				...globals.browser,
-				...globals.node
-			}
-		}
-	},
-	{
-		files: ['**/*.svelte'],
-		languageOptions: {
-			parserOptions: {
-				parser: ts.parser
-			}
-		}
-	},
-	{
-		ignores: ['build/', '.svelte-kit/', 'dist/']
-	}
-];
+	{ ignores: ['dist/', 'playwright-report/', 'test-results/'] }
+]

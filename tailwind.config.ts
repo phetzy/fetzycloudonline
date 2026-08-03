@@ -1,29 +1,37 @@
-import flowbitePlugin from 'flowbite/plugin'
-
-import type { Config } from 'tailwindcss';
+import type { Config } from 'tailwindcss'
 
 export default {
-	content: ['./src/**/*.{html,js,svelte,ts}', './node_modules/flowbite-svelte/**/*.{html,js,svelte,ts}'],
-  darkMode: 'class',
+	content: ['./index.html', './src/**/*.{ts,tsx}'],
 	theme: {
 		extend: {
-      colors: {
-        // flowbite-svelte
-        primary: {
-			50: '#FFF5F2',
-			100: '#FFF1EE',
-			200: '#FFE4DE',
-			300: '#FFD5CC',
-			400: '#FFBCAD',
-			500: '#FE795D',
-			600: '#EF562F',
-			700: '#EB4F27',
-			800: '#CC4522',
-			900: '#A5371B'
-      		}
+			colors: {
+				ground: '#0D0D0E',
+				ph: 'var(--ph)',
+				bright: '#F2EEE4',
+				body: '#D5D0C4',
+				muted: '#A9A498',
+				faint: '#8E8A80',
+				dim: '#949086',
+				chrome: '#7E7A70',
+				sky: '#8FB8DE',
+				rule: '#2A2A28',
+				'rule-faint': '#1E1E1C',
+				surface: '#17171A',
+				panel: '#101012'
+			},
+			fontFamily: {
+				mono: ['"IBM Plex Mono"', 'monospace']
+			},
+			keyframes: {
+				blink: {
+					'0%, 49%': { opacity: '1' },
+					'50%, 100%': { opacity: '0' }
+				}
+			},
+			animation: {
+				blink: 'blink 1.1s step-end infinite'
+			}
 		}
-    }
 	},
-
-	plugins: [flowbitePlugin]
-} as Config;
+	plugins: []
+} as Config

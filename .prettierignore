@@ -2,3 +2,12 @@
 package-lock.json
 pnpm-lock.yaml
 yarn.lock
+
+# Build output
+dist/
+playwright-report/
+test-results/
+
+# SDD planning docs (not part of the app)
+docs/
+.superpowers/

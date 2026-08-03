@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+	--ph: #e0845c;
+}
+
+body {
+	margin: 0;
+	background: #0d0d0e;
+}
+
+html {
+	scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	html {
+		scroll-behavior: auto;
+	}
+}
+
+::selection {
+	background: var(--ph);
+	color: #0d0d0e;
+}

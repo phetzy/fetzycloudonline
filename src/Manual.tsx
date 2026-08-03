@@ -1,10 +1,16 @@
 import { useRef } from 'react'
 import { Section } from './components/Section'
+import { StatusBar } from './components/StatusBar'
 import { DetailRow, LabelGrid, LabelRow, SubsystemRow } from './components/rows'
-import { EMAIL, PLATFORM_DETAILS, STACK, SUBSYSTEMS, TRANSFER_DETAILS } from './content'
+import { EMAIL, PLATFORM_DETAILS, SECTIONS, STACK, SUBSYSTEMS, TRANSFER_DETAILS } from './content'
+import { useScrollPercent } from './hooks/useScrollPercent'
 
 export function Manual() {
 	const contentRef = useRef<HTMLElement>(null)
+	const searchRef = useRef<HTMLInputElement>(null)
+	const percent = useScrollPercent()
+	const idx = 0
+	const noop = () => {}
 
 	return (
 		<div className="relative min-h-screen bg-ground px-[clamp(14px,4vw,48px)] pb-[108px] font-mono text-[14.5px] leading-[1.65] text-body">
@@ -221,6 +227,23 @@ export function Manual() {
 					</footer>
 				</main>
 			</div>
+
+			<StatusBar
+				current={SECTIONS[idx].label}
+				position={`${idx + 1}/${SECTIONS.length}`}
+				percent={percent}
+				searching={false}
+				query=""
+				matchLabel="enter ↵ next"
+				searchRef={searchRef}
+				onQueryChange={noop}
+				onSearchKeyDown={noop}
+				onPrev={noop}
+				onNext={noop}
+				onToc={noop}
+				onFind={noop}
+				onHelp={noop}
+			/>
 		</div>
 	)
 }

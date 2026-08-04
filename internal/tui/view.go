@@ -176,12 +176,26 @@ func (m Model) renderFilterBar(width int) string {
 	return truncateToWidth(prompt+query, width)
 }
 
+// renderRevealedBar is the footer shown after enter reveals a link: the URL
+// that was written to the clipboard via OSC 52. Since OSC 52 support is not
+// universal, this is what always works — the copy is a bonus, not the only
+// way the visitor sees the address.
+func (m Model) renderRevealedBar(width int) string {
+	label := lipgloss.NewStyle().Foreground(colGreen).Render("copied ")
+	url := m.styles.Help.Render(m.revealed)
+	return truncateToWidth(label+url, width)
+}
+
 // renderFooter is the frame's bottom line: the filter input while it is
-// open, the key-binding help otherwise. Both are always exactly one line,
-// so which one is showing does not change computeLayout's fixed height.
+// open, the just-revealed URL after enter, the key-binding help otherwise.
+// All three are always exactly one line, so which one is showing does not
+// change computeLayout's fixed height.
 func (m Model) renderFooter(width int) string {
 	if m.filtering {
 		return m.renderFilterBar(width)
+	}
+	if m.revealed != "" {
+		return m.renderRevealedBar(width)
 	}
 	return m.renderHelp()
 }
@@ -222,7 +236,9 @@ func (m Model) renderListPane(outerW, outerH int, focused bool) string {
 
 // renderDetailPane renders the starship-style prompt header and the
 // selected section's body inside the bubbles viewport, which owns
-// scrolling from Task 5 on.
+// scrolling from Task 5 on. While the egg is showing, it replaces the
+// viewport's content entirely; any key dismisses it and returns to the
+// section that was on screen.
 func (m Model) renderDetailPane(outerW, outerH int, focused bool) string {
 	style := m.styles.PaneUnfocused
 	if focused {
@@ -231,7 +247,20 @@ func (m Model) renderDetailPane(outerW, outerH int, focused bool) string {
 	styleW := paneStyleDim(outerW)
 	styleH := paneStyleDim(outerH)
 
-	return style.Width(styleW).Height(styleH).Render(m.viewport.View())
+	body := m.viewport.View()
+	if m.egg {
+		body = renderEgg(m.styles)
+	}
+	return style.Width(styleW).Height(styleH).Render(body)
+}
+
+// renderEgg renders the undocumented easter egg's line: "Catppuccin" in the
+// accent colour, italic, the rest in subtext0.
+func renderEgg(styles Styles) string {
+	accent := lipgloss.NewStyle().Foreground(colAccent).Italic(true).Render("Catppuccin")
+	rest := styles.TitleSub.Render(" enjoyer")
+	lead := styles.TitleSub.Render("Yes, I am a ")
+	return lead + accent + rest
 }
 
 // renderDetailBody builds the detail viewport's content: the prompt line,

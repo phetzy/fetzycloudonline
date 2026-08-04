@@ -26,12 +26,24 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m Model) handleKey(msg tea.KeyMsg) Model {
 	// While the filter input is open, every keystroke belongs to it — j/k
 	// included — so this branch must run before any navigation case gets a
-	// chance to claim them.
+	// chance to claim them. It also outranks the egg: typing "C" into a
+	// filter must insert a "C", not trigger the egg.
 	if m.filtering {
 		return m.handleFilterKey(msg)
 	}
 
+	// While the egg is showing, any key dismisses it and does nothing else.
+	if m.egg {
+		m.egg = false
+		return m
+	}
+
 	switch {
+	case key.Matches(msg, m.keys.Egg):
+		m.egg = true
+		return m
+	case key.Matches(msg, m.keys.Accept):
+		return m.revealLink()
 	case key.Matches(msg, m.keys.Filter):
 		m.filtering = true
 		return m
@@ -215,5 +227,24 @@ func (m Model) switchTab(delta int) Model {
 	m.focus = FocusList
 	m.filter = "" // switching tabs clears the filter — do not strand the list on "no match".
 	m.syncViewport()
+	return m
+}
+
+// revealLink is enter's handler: a server cannot open the visitor's
+// browser, so it copies the selected section's first link to the visitor's
+// clipboard via an OSC 52 escape sequence written to the model's writer,
+// and records the URL so the view can also display it — OSC 52 is not
+// universally supported, so the display is what always works. Sections
+// with no links (most of them) do nothing.
+func (m Model) revealLink() Model {
+	links := m.selectedSection().Links
+	if len(links) == 0 {
+		return m
+	}
+	url := links[0].Href
+	m.revealed = url
+	if m.out != nil {
+		_, _ = m.out.Write([]byte(OSC52(url)))
+	}
 	return m
 }

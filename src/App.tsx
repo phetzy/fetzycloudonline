@@ -43,6 +43,8 @@ export function App() {
 		setSelected(firstSectionOfTab(t).id)
 		setDirection(1)
 		setTabEpoch((e) => e + 1)
+		setFilter('')
+		setFiltering(false)
 	}, [])
 
 	const visible = visibleSections(tab, filter, filtering)
@@ -59,6 +61,7 @@ export function App() {
 			)
 			const nextIndex = clampIndex(i, delta, list.length)
 			const next = list[nextIndex]
+			if (next.id === selected) return
 			setDirection(nextIndex > i ? 1 : -1)
 			setSelected(next.id)
 			setTab(next.tab)
@@ -197,7 +200,11 @@ export function App() {
 	}, [focus, move, scrollViewport, cycleTab, current, startFilter, minimized])
 
 	return (
-		<div className="flex h-screen flex-col overflow-hidden bg-crust p-[clamp(8px,2.4vw,32px)] font-mono text-text">
+		<div
+			className={`flex flex-col bg-crust p-[clamp(8px,2.4vw,32px)] font-mono text-text ${
+				hydrated ? 'h-screen overflow-hidden' : ''
+			}`}
+		>
 			<div
 				className={`mx-auto flex w-full max-w-[1220px] flex-col overflow-hidden rounded-[10px] border border-surface0 bg-base ${
 					minimized ? 'h-auto flex-none' : 'h-full'
@@ -213,7 +220,7 @@ export function App() {
 					<div className="flex min-h-0 flex-1 flex-col gap-3 p-[clamp(12px,2vw,20px)]">
 						<HeaderRow />
 						<TabBar tab={tab} onSelect={selectTab} />
-						<div className="grid min-h-0 flex-1 grid-cols-1 gap-[14px] tui:grid-cols-[minmax(0,26ch)_minmax(0,1fr)]">
+						<main className="grid min-h-0 flex-1 grid-cols-1 gap-[14px] tui:grid-cols-[minmax(0,26ch)_minmax(0,1fr)]">
 							<ListPane
 								tab={tab}
 								sections={visible}
@@ -232,7 +239,7 @@ export function App() {
 								onFocus={() => setFocus('viewport')}
 								viewportRef={viewportRef}
 							/>
-						</div>
+						</main>
 						<HelpFooter
 							focus={focus}
 							filtering={filtering}

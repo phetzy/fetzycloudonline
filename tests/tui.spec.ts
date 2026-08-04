@@ -90,13 +90,13 @@ test('the yellow light minimizes and the green light restores', async ({ page })
 
 	await page.getByRole('button', { name: 'Minimize the terminal window' }).click()
 	await expect(page.getByText(/Yes, I am a/)).toBeVisible()
-	await expect(page.getByRole('button', { name: '▌ readme' })).toHaveCount(0)
+	await expect(page.getByRole('tab', { name: '▌ readme' })).toHaveCount(0)
 
 	// Click the green light itself. Restoring via esc goes through a different
 	// code path (the window keydown handler), so pressing esc here would leave
 	// the button's own onClick wiring untested despite this test's name.
 	await page.getByRole('button', { name: 'Restore the terminal window' }).click()
-	await expect(page.getByRole('button', { name: '▌ readme' })).toBeVisible()
+	await expect(page.getByRole('tab', { name: '▌ readme' })).toBeVisible()
 	await expect(page.getByText(/Yes, I am a/)).toHaveCount(0)
 })
 
@@ -108,7 +108,7 @@ test('esc, enter, and space each restore a minimized window', async ({ page }) =
 		await expect(page.getByText(/Yes, I am a/)).toBeVisible()
 
 		await page.keyboard.press(key)
-		await expect(page.getByRole('button', { name: '▌ readme' })).toBeVisible()
+		await expect(page.getByRole('tab', { name: '▌ readme' })).toBeVisible()
 	}
 })
 

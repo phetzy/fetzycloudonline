@@ -2,9 +2,9 @@ export function HeaderRow() {
 	return (
 		<div data-testid="header-row" className="flex flex-none flex-wrap items-stretch gap-[14px]">
 			<div className="rounded-[6px] border border-acc2 bg-mantle px-4 py-[10px]">
-				<div className="text-[clamp(18px,2.4vw,26px)] font-bold leading-[1.15] tracking-[0.14em] text-acc">
+				<h1 className="text-[clamp(18px,2.4vw,26px)] font-bold leading-[1.15] tracking-[0.14em] text-acc">
 					DAVID FETZER
-				</div>
+				</h1>
 				<div className="mt-[3px] text-[12px] text-subtext0">
 					software engineer · boise, id · remote
 				</div>

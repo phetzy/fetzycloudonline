@@ -2,13 +2,15 @@ import { TABS, type TabId } from '../content'
 
 export function TabBar({ tab, onSelect }: { tab: TabId; onSelect: (t: TabId) => void }) {
 	return (
-		<div className="flex flex-none flex-wrap gap-[6px]">
+		<div role="tablist" className="flex flex-none flex-wrap gap-[6px]">
 			{TABS.map((t) => {
 				const active = t.id === tab
 				return (
 					<button
 						key={t.id}
 						type="button"
+						role="tab"
+						aria-selected={active}
 						onClick={() => onSelect(t.id)}
 						className={`rounded-t-[6px] border border-b-0 px-[14px] py-[6px] font-mono text-[12.5px] ${
 							active

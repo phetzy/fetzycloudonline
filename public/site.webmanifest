@@ -1,6 +1,6 @@
 {
-	"name": "David Fetzer — Software Engineer",
-	"short_name": "FETZER(1)",
+	"name": "fetzer — TUI",
+	"short_name": "fetzer",
 	"start_url": "/",
 	"display": "standalone",
 	"background_color": "#181926",

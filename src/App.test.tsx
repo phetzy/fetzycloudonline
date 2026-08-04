@@ -12,23 +12,23 @@ test('renders the title block and metadata', () => {
 
 test('renders four tabs with readme active', () => {
 	render(<App />)
-	expect(screen.getByRole('button', { name: '▌ readme' })).toBeInTheDocument()
-	expect(screen.getByRole('button', { name: 'projects' })).toBeInTheDocument()
-	expect(screen.getByRole('button', { name: 'work' })).toBeInTheDocument()
-	expect(screen.getByRole('button', { name: 'contact' })).toBeInTheDocument()
+	expect(screen.getByRole('tab', { name: '▌ readme' })).toBeInTheDocument()
+	expect(screen.getByRole('tab', { name: 'projects' })).toBeInTheDocument()
+	expect(screen.getByRole('tab', { name: 'work' })).toBeInTheDocument()
+	expect(screen.getByRole('tab', { name: 'contact' })).toBeInTheDocument()
 })
 
 test('clicking a tab makes it active', async () => {
 	const user = userEvent.setup()
 	render(<App />)
-	await user.click(screen.getByRole('button', { name: 'projects' }))
-	expect(screen.getByRole('button', { name: '▌ projects' })).toBeInTheDocument()
+	await user.click(screen.getByRole('tab', { name: 'projects' }))
+	expect(screen.getByRole('tab', { name: '▌ projects' })).toBeInTheDocument()
 })
 
 test('the list shows the active tab name and its sections', async () => {
 	const user = userEvent.setup()
 	render(<App />)
-	await user.click(screen.getByRole('button', { name: 'projects' }))
+	await user.click(screen.getByRole('tab', { name: 'projects' }))
 
 	expect(screen.getByText('PROJECTS')).toBeInTheDocument()
 	expect(screen.getByRole('button', { name: '› mapwright' })).toBeInTheDocument()
@@ -39,7 +39,7 @@ test('the list shows the active tab name and its sections', async () => {
 test('clicking a list row selects it', async () => {
 	const user = userEvent.setup()
 	render(<App />)
-	await user.click(screen.getByRole('button', { name: 'projects' }))
+	await user.click(screen.getByRole('tab', { name: 'projects' }))
 	await user.click(screen.getByRole('button', { name: 'transfer-it-cli' }))
 
 	expect(screen.getByRole('button', { name: '› transfer-it-cli' })).toBeInTheDocument()
@@ -63,7 +63,7 @@ test('after hydration only the selected article is visible', async () => {
 test('the detail pane shows the selected section', async () => {
 	const user = userEvent.setup()
 	render(<App />)
-	await user.click(screen.getByRole('button', { name: 'projects' }))
+	await user.click(screen.getByRole('tab', { name: 'projects' }))
 
 	expect(screen.getByRole('heading', { name: 'mapwright', level: 2 })).toBeVisible()
 	expect(screen.getByText('self-hosted map infrastructure · mapwright.io')).toBeVisible()
@@ -72,7 +72,7 @@ test('the detail pane shows the selected section', async () => {
 test('the prompt shows the section path and branch', async () => {
 	const user = userEvent.setup()
 	render(<App />)
-	await user.click(screen.getByRole('button', { name: 'projects' }))
+	await user.click(screen.getByRole('tab', { name: 'projects' }))
 
 	expect(screen.getByText('~/site/projects/mapwright')).toBeInTheDocument()
 })
@@ -80,7 +80,7 @@ test('the prompt shows the section path and branch', async () => {
 test('j and k move the selection when the list has focus', async () => {
 	const user = userEvent.setup()
 	render(<App />)
-	await user.click(screen.getByRole('button', { name: 'projects' }))
+	await user.click(screen.getByRole('tab', { name: 'projects' }))
 
 	await user.keyboard('j')
 	expect(screen.getByRole('button', { name: '› transfer-it-cli' })).toBeInTheDocument()
@@ -92,7 +92,7 @@ test('j and k move the selection when the list has focus', async () => {
 test('selection does not wrap past either end', async () => {
 	const user = userEvent.setup()
 	render(<App />)
-	await user.click(screen.getByRole('button', { name: 'projects' }))
+	await user.click(screen.getByRole('tab', { name: 'projects' }))
 
 	await user.keyboard('k')
 	expect(screen.getByRole('button', { name: '› mapwright' })).toBeInTheDocument()
@@ -106,7 +106,7 @@ test('selection does not wrap past either end', async () => {
 test('g and G jump to the first and last item', async () => {
 	const user = userEvent.setup()
 	render(<App />)
-	await user.click(screen.getByRole('button', { name: 'projects' }))
+	await user.click(screen.getByRole('tab', { name: 'projects' }))
 
 	await user.keyboard('{Shift>}G{/Shift}')
 	expect(screen.getByText('5/5')).toBeInTheDocument()
@@ -131,16 +131,16 @@ test('tab cycles tabs forward and shift+tab backward', async () => {
 	render(<App />)
 
 	await user.keyboard('{Tab}')
-	expect(screen.getByRole('button', { name: '▌ projects' })).toBeInTheDocument()
+	expect(screen.getByRole('tab', { name: '▌ projects' })).toBeInTheDocument()
 
 	await user.keyboard('{Shift>}{Tab}{/Shift}')
-	expect(screen.getByRole('button', { name: '▌ readme' })).toBeInTheDocument()
+	expect(screen.getByRole('tab', { name: '▌ readme' })).toBeInTheDocument()
 })
 
 test('keys are ignored while a modifier is held', async () => {
 	const user = userEvent.setup()
 	render(<App />)
-	await user.click(screen.getByRole('button', { name: 'projects' }))
+	await user.click(screen.getByRole('tab', { name: 'projects' }))
 
 	await user.keyboard('{Control>}j{/Control}')
 	expect(screen.getByRole('button', { name: '› mapwright' })).toBeInTheDocument()
@@ -195,6 +195,24 @@ test('enter keeps the filter and closes the input', async () => {
 	expect(screen.queryByLabelText('Filter sections')).not.toBeInTheDocument()
 })
 
+test('switching tabs while a filter is active clears it and shows the new tab full list', async () => {
+	const user = userEvent.setup()
+	render(<App />)
+
+	await user.keyboard('/')
+	await user.type(screen.getByLabelText('Filter sections'), 'stack')
+	await user.keyboard('{Enter}')
+	expect(screen.getByRole('button', { name: '› stack' })).toBeInTheDocument()
+	expect(screen.getByText('1/1 filtered')).toBeInTheDocument()
+
+	// work -> contact
+	await user.keyboard('{Tab}')
+
+	expect(screen.getByRole('button', { name: '› contact' })).toBeInTheDocument()
+	expect(screen.getByText('1/1')).toBeInTheDocument()
+	expect(screen.queryByText('no match')).not.toBeInTheDocument()
+})
+
 test('a filter with no match reports no match', async () => {
 	const user = userEvent.setup()
 	render(<App />)
@@ -208,11 +226,11 @@ test('the yellow light minimizes the window and reveals the note', async () => {
 	const user = userEvent.setup()
 	render(<App />)
 
-	expect(screen.getByRole('button', { name: '▌ readme' })).toBeInTheDocument()
+	expect(screen.getByRole('tab', { name: '▌ readme' })).toBeInTheDocument()
 
 	await user.click(screen.getByRole('button', { name: 'Minimize the terminal window' }))
 
-	expect(screen.queryByRole('button', { name: '▌ readme' })).not.toBeInTheDocument()
+	expect(screen.queryByRole('tab', { name: '▌ readme' })).not.toBeInTheDocument()
 	expect(screen.getByText(/Yes, I am a/)).toBeInTheDocument()
 	expect(screen.getByText('Catppuccin')).toBeInTheDocument()
 })
@@ -224,7 +242,7 @@ test('the green light restores the window', async () => {
 	await user.click(screen.getByRole('button', { name: 'Minimize the terminal window' }))
 	await user.click(screen.getByRole('button', { name: 'Restore the terminal window' }))
 
-	expect(screen.getByRole('button', { name: '▌ readme' })).toBeInTheDocument()
+	expect(screen.getByRole('tab', { name: '▌ readme' })).toBeInTheDocument()
 	expect(screen.queryByText(/Yes, I am a/)).not.toBeInTheDocument()
 })
 
@@ -249,7 +267,7 @@ test('esc, enter, and space restore; other keys do nothing while minimized', asy
 		await user.click(screen.getByRole('button', { name: 'Minimize the terminal window' }))
 		expect(screen.getByText(/Yes, I am a/)).toBeInTheDocument()
 		await user.keyboard(key)
-		expect(screen.getByRole('button', { name: '▌ readme' })).toBeInTheDocument()
+		expect(screen.getByRole('tab', { name: '▌ readme' })).toBeInTheDocument()
 	}
 })
 

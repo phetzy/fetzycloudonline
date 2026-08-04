@@ -36,7 +36,10 @@ export function ListPane({
 		const bottom = top + el.offsetHeight
 		if (top < box.scrollTop) box.scrollTop = top
 		else if (bottom > box.scrollTop + box.clientHeight) box.scrollTop = bottom - box.clientHeight
-	}, [sections, selectedId])
+		// Deliberately keyed on selectedId alone: sections is a fresh array on
+		// every render, and re-centring should only happen on an actual
+		// selection change, not on every render.
+	}, [selectedId])
 
 	// Stagger the row entrance animation whenever the active tab changes.
 	useEffect(() => {

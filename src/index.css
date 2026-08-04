@@ -1,3 +1,11 @@
+/* Self-hosted IBM Plex Mono. These must precede the Tailwind directives —
+   CSS @import is only valid at the top of a stylesheet. Latin subset only;
+   the page's widest characters (em dash, en dash, curly apostrophe) all fall
+   inside it. Fontsource sets font-display: swap. */
+@import '@fontsource/ibm-plex-mono/latin-400.css';
+@import '@fontsource/ibm-plex-mono/latin-500.css';
+@import '@fontsource/ibm-plex-mono/latin-600.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

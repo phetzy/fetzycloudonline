@@ -13,7 +13,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		return m.SetSize(msg.Width, msg.Height), nil
 	case tea.KeyMsg:
-		return m.handleKey(msg), nil
+		return m.handleKey(msg)
 	}
 	return m, nil
 }
@@ -23,54 +23,67 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // the viewport has focus; h/l switch focus; tab/shift+tab cycle tabs and
 // select the new tab's first section; g/G jump to the ends; selection never
 // wraps.
-func (m Model) handleKey(msg tea.KeyMsg) Model {
+func (m Model) handleKey(msg tea.KeyMsg) (Model, tea.Cmd) {
+	// ctrl+c always quits, regardless of mode — including while the filter
+	// input is open or the egg is showing. It is the terminal's universal
+	// escape hatch; having an undocumented easter egg swallow it, or the
+	// filter guard eat it as text, would be a bad surprise. This check must
+	// run before both of those guards.
+	if msg.Type == tea.KeyCtrlC {
+		return m, tea.Quit
+	}
+
 	// While the filter input is open, every keystroke belongs to it — j/k
 	// included — so this branch must run before any navigation case gets a
 	// chance to claim them. It also outranks the egg: typing "C" into a
 	// filter must insert a "C", not trigger the egg.
 	if m.filtering {
-		return m.handleFilterKey(msg)
+		return m.handleFilterKey(msg), nil
 	}
 
 	// While the egg is showing, any key dismisses it and does nothing else.
+	// (ctrl+c already returned above, so this only ever sees other keys,
+	// such as "q" — which just dismisses, matching "any key returns".)
 	if m.egg {
 		m.egg = false
-		return m
+		return m, nil
 	}
 
 	switch {
+	case key.Matches(msg, m.keys.Quit):
+		return m, tea.Quit
 	case key.Matches(msg, m.keys.Egg):
 		m.egg = true
-		return m
+		return m, nil
 	case key.Matches(msg, m.keys.Accept):
-		return m.revealLink()
+		return m.revealLink(), nil
 	case key.Matches(msg, m.keys.Filter):
 		m.filtering = true
-		return m
+		return m, nil
 	case key.Matches(msg, m.keys.NextTab):
-		return m.switchTab(1)
+		return m.switchTab(1), nil
 	case key.Matches(msg, m.keys.PrevTab):
-		return m.switchTab(-1)
+		return m.switchTab(-1), nil
 	case key.Matches(msg, m.keys.Left):
 		m.focus = FocusList
-		return m
+		return m, nil
 	case key.Matches(msg, m.keys.Right):
 		m.focus = FocusViewport
-		return m
+		return m, nil
 	case key.Matches(msg, m.keys.Down):
-		return m.move(1)
+		return m.move(1), nil
 	case key.Matches(msg, m.keys.Up):
-		return m.move(-1)
+		return m.move(-1), nil
 	case key.Matches(msg, m.keys.Top):
-		return m.jump(true)
+		return m.jump(true), nil
 	case key.Matches(msg, m.keys.Bottom):
-		return m.jump(false)
+		return m.jump(false), nil
 	case key.Matches(msg, m.keys.PageDn):
-		return m.page(1)
+		return m.page(1), nil
 	case key.Matches(msg, m.keys.PageUp):
-		return m.page(-1)
+		return m.page(-1), nil
 	}
-	return m
+	return m, nil
 }
 
 // handleFilterKey dispatches a keystroke while the filter input is open.
@@ -128,9 +141,7 @@ func (m Model) selectAcrossTabs(s site.Section) Model {
 			break
 		}
 	}
-	m.selected = s.ID
-	m.syncViewport()
-	return m
+	return m.selectID(s.ID)
 }
 
 // move advances or retreats the selection by one when the list has focus,
@@ -210,7 +221,17 @@ func (m Model) moveSelection(delta int) Model {
 // selectByIndex selects the section at idx within visible and resyncs the
 // viewport to show it.
 func (m Model) selectByIndex(visible []site.Section, idx int) Model {
-	m.selected = visible[idx].ID
+	return m.selectID(visible[idx].ID)
+}
+
+// selectID is the single funnel every selection change passes through: it
+// sets m.selected, resyncs the viewport, and clears any previously revealed
+// link. A revealed URL in the footer describes the section that was
+// current when enter was pressed; once the selection moves on, leaving it
+// up would misleadingly imply it belongs to the new section.
+func (m Model) selectID(id string) Model {
+	m.selected = id
+	m.revealed = ""
 	m.syncViewport()
 	return m
 }
@@ -223,11 +244,9 @@ func (m Model) switchTab(delta int) Model {
 		return m
 	}
 	m.tabIdx = ((m.tabIdx+delta)%n + n) % n
-	m.selected = FirstSectionOfTab(m.content, m.currentTab()).ID
 	m.focus = FocusList
 	m.filter = "" // switching tabs clears the filter — do not strand the list on "no match".
-	m.syncViewport()
-	return m
+	return m.selectID(FirstSectionOfTab(m.content, m.currentTab()).ID)
 }
 
 // revealLink is enter's handler: a server cannot open the visitor's

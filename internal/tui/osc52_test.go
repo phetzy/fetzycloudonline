@@ -63,6 +63,36 @@ func TestEggShowsAndAnyKeyDismisses(t *testing.T) {
 	}
 }
 
+func TestRevealedClearsWhenSelectionChanges(t *testing.T) {
+	var out bytes.Buffer
+	m := New(site.MustLoad(), &out).SetSize(120, 40)
+	m = press(t, m, "tab") // projects/mapwright, which has links
+	m = press(t, m, "enter")
+	if m.Revealed() == "" {
+		t.Fatal("setup: expected a revealed link before moving on")
+	}
+
+	m = press(t, m, "j") // moves to the next section in the list
+
+	if got := m.Revealed(); got != "" {
+		t.Errorf("revealed = %q after the selection changed, want empty", got)
+	}
+	if strings.Contains(m.View(), "https://mapwright.io") {
+		t.Error("the stale revealed URL is still shown after the selection changed")
+	}
+}
+
+func TestEggKeyWhileFilteringIsJustText(t *testing.T) {
+	m := press(t, newTestModel(t), "/", "C")
+
+	if m.Egg() {
+		t.Error("typing C into the filter triggered the easter egg")
+	}
+	if got := m.Filter(); got != "C" {
+		t.Errorf("filter = %q, want %q", got, "C")
+	}
+}
+
 func TestEggIsNotInTheHelpFooter(t *testing.T) {
 	m := newTestModel(t)
 	view := m.View()

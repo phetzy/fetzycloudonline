@@ -10,3 +10,13 @@ export function scrollBehavior(): ScrollBehavior {
 	if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return 'smooth'
 	return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
 }
+
+/**
+ * Whether the visitor asked for reduced motion. Safe during SSR. Checked in
+ * JavaScript rather than only in CSS because JS-driven animation ignores the
+ * CSS media query.
+ */
+export function prefersReducedMotion(): boolean {
+	if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false
+	return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+}

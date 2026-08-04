@@ -3,6 +3,9 @@ import type { Config } from 'tailwindcss'
 export default {
 	content: ['./index.html', './src/**/*.{ts,tsx}'],
 	theme: {
+		screens: {
+			tui: '700px'
+		},
 		extend: {
 			colors: {
 				crust: '#181926',

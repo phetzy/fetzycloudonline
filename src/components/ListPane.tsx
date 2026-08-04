@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import type { Section } from '../content'
+import { prefersReducedMotion } from '../hooks/prefersReducedMotion'
 
 type Props = {
 	tab: string
@@ -7,11 +8,21 @@ type Props = {
 	selectedId: string
 	focused: boolean
 	status: string
+	tabEpoch: number
 	onSelect: (id: string) => void
 	onFocus: () => void
 }
 
-export function ListPane({ tab, sections, selectedId, focused, status, onSelect, onFocus }: Props) {
+export function ListPane({
+	tab,
+	sections,
+	selectedId,
+	focused,
+	status,
+	tabEpoch,
+	onSelect,
+	onFocus
+}: Props) {
 	const boxRef = useRef<HTMLDivElement>(null)
 
 	// Keep the selection in view as it moves.
@@ -27,9 +38,21 @@ export function ListPane({ tab, sections, selectedId, focused, status, onSelect,
 		else if (bottom > box.scrollTop + box.clientHeight) box.scrollTop = bottom - box.clientHeight
 	}, [sections, selectedId])
 
+	// Stagger the row entrance animation whenever the active tab changes.
+	useEffect(() => {
+		const box = boxRef.current
+		if (!box || prefersReducedMotion()) return
+		Array.from(box.children).forEach((child, i) => {
+			const el = child as HTMLElement
+			el.style.animation = 'none'
+			void el.offsetWidth // force reflow so the animation restarts
+			el.style.animation = `slidex 190ms cubic-bezier(0.22, 1, 0.36, 1) ${i * 24}ms both`
+		})
+	}, [tabEpoch])
+
 	return (
 		<div
-			className={`flex min-h-0 flex-col overflow-hidden rounded-[6px] border bg-mantle ${
+			className={`flex max-h-[30vh] min-h-0 flex-col overflow-hidden rounded-[6px] border bg-mantle tui:max-h-none ${
 				focused ? 'border-acc2' : 'border-surface0'
 			}`}
 		>

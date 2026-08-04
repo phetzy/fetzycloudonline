@@ -1,4 +1,4 @@
-import { scrollBehavior } from './prefersReducedMotion'
+import { prefersReducedMotion, scrollBehavior } from './prefersReducedMotion'
 
 function stubMatchMedia(matches: boolean) {
 	window.matchMedia = ((query: string) => ({
@@ -21,4 +21,28 @@ test('returns auto when the user prefers reduced motion', () => {
 test('returns smooth when the user has no motion preference', () => {
 	stubMatchMedia(false)
 	expect(scrollBehavior()).toBe('smooth')
+})
+
+test('reports the reduced-motion preference', () => {
+	const stub = (matches: boolean) =>
+		vi.stubGlobal('matchMedia', () => ({
+			matches,
+			media: '',
+			addEventListener() {},
+			removeEventListener() {}
+		}))
+
+	stub(true)
+	expect(prefersReducedMotion()).toBe(true)
+
+	stub(false)
+	expect(prefersReducedMotion()).toBe(false)
+
+	vi.unstubAllGlobals()
+})
+
+test('reports false when matchMedia is unavailable', () => {
+	vi.stubGlobal('matchMedia', undefined)
+	expect(prefersReducedMotion()).toBe(false)
+	vi.unstubAllGlobals()
 })

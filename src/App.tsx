@@ -20,6 +20,8 @@ export function App() {
 	const dims = useTerminalDims()
 	const [tab, setTab] = useState<TabId>('readme')
 	const [selected, setSelected] = useState('readme')
+	const [direction, setDirection] = useState(1)
+	const [tabEpoch, setTabEpoch] = useState(0)
 	const [focus, setFocus] = useState<'list' | 'viewport'>('list')
 	const viewportRef = useRef<HTMLDivElement>(null)
 	// False during the server render and the hydrating client render, true
@@ -37,6 +39,8 @@ export function App() {
 	const selectTab = useCallback((t: TabId) => {
 		setTab(t)
 		setSelected(firstSectionOfTab(t).id)
+		setDirection(1)
+		setTabEpoch((e) => e + 1)
 	}, [])
 
 	const visible = visibleSections(tab, filter, filtering)
@@ -51,7 +55,9 @@ export function App() {
 				0,
 				list.findIndex((s) => s.id === selected)
 			)
-			const next = list[clampIndex(i, delta, list.length)]
+			const nextIndex = clampIndex(i, delta, list.length)
+			const next = list[nextIndex]
+			setDirection(nextIndex > i ? 1 : -1)
 			setSelected(next.id)
 			setTab(next.tab)
 		},
@@ -187,13 +193,14 @@ export function App() {
 				<div className="flex min-h-0 flex-1 flex-col gap-3 p-[clamp(12px,2vw,20px)]">
 					<HeaderRow />
 					<TabBar tab={tab} onSelect={selectTab} />
-					<div className="grid min-h-0 flex-1 grid-cols-1 gap-[14px] md:grid-cols-[minmax(0,26ch)_minmax(0,1fr)]">
+					<div className="grid min-h-0 flex-1 grid-cols-1 gap-[14px] tui:grid-cols-[minmax(0,26ch)_minmax(0,1fr)]">
 						<ListPane
 							tab={tab}
 							sections={visible}
 							selectedId={selected}
 							focused={focus === 'list'}
 							status={status}
+							tabEpoch={tabEpoch}
 							onSelect={setSelected}
 							onFocus={() => setFocus('list')}
 						/>
@@ -201,6 +208,7 @@ export function App() {
 							section={current}
 							focused={focus === 'viewport'}
 							hydrated={hydrated}
+							direction={direction}
 							onFocus={() => setFocus('viewport')}
 							viewportRef={viewportRef}
 						/>

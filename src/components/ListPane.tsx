@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, type RefObject } from 'react'
 import type { Section } from '../content'
 import { prefersReducedMotion } from '../hooks/prefersReducedMotion'
 
@@ -11,6 +11,7 @@ type Props = {
 	tabEpoch: number
 	onSelect: (id: string) => void
 	onFocus: () => void
+	listRef: RefObject<HTMLDivElement | null>
 }
 
 export function ListPane({
@@ -21,9 +22,19 @@ export function ListPane({
 	status,
 	tabEpoch,
 	onSelect,
-	onFocus
+	onFocus,
+	listRef
 }: Props) {
 	const boxRef = useRef<HTMLDivElement>(null)
+	// Mirror the local ref onto the one App uses to move real focus into this
+	// pane, so effects here can keep depending on the stable local ref.
+	const setBoxRef = useCallback(
+		(node: HTMLDivElement | null) => {
+			boxRef.current = node
+			listRef.current = node
+		},
+		[listRef]
+	)
 
 	// Keep the selection in view as it moves.
 	useEffect(() => {
@@ -65,9 +76,10 @@ export function ListPane({
 			<div
 				data-vp
 				data-testid="list-viewport"
-				ref={boxRef}
+				ref={setBoxRef}
+				tabIndex={-1}
 				onClick={onFocus}
-				className="flex-1 overflow-y-auto py-[6px]"
+				className="flex-1 overflow-y-auto py-[6px] outline-none"
 			>
 				{sections.map((s) => {
 					const active = s.id === selectedId

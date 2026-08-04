@@ -41,8 +41,9 @@ export function DetailPane({ section, focused, hydrated, direction, onFocus, vie
 				data-vp
 				data-testid="detail-viewport"
 				ref={viewportRef}
+				tabIndex={-1}
 				onClick={onFocus}
-				className="flex-1 overflow-y-auto p-[clamp(14px,2vw,22px)]"
+				className="flex-1 overflow-y-auto p-[clamp(14px,2vw,22px)] outline-none"
 			>
 				<div ref={paneRef}>
 					{SECTIONS.map((s) => (

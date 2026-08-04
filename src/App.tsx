@@ -25,6 +25,7 @@ export function App() {
 	const [tabEpoch, setTabEpoch] = useState(0)
 	const [focus, setFocus] = useState<'list' | 'viewport'>('list')
 	const viewportRef = useRef<HTMLDivElement>(null)
+	const listRef = useRef<HTMLDivElement>(null)
 	// False during the server render and the hydrating client render, true
 	// afterwards. Both renders must agree or hydration breaks, which is why this
 	// is not plain state set in an effect.
@@ -200,6 +201,15 @@ export function App() {
 		return () => window.removeEventListener('keydown', onKey)
 	}, [focus, move, scrollViewport, cycleTab, current, startFilter, minimized])
 
+	// Keep real DOM focus in sync with the logical pane focus, so native Tab
+	// traversal starts from inside the focused pane instead of from <body>.
+	// Skipped while filtering so typing in the filter input isn't interrupted.
+	useEffect(() => {
+		if (filtering) return
+		const el = focus === 'list' ? listRef.current : viewportRef.current
+		el?.focus({ preventScroll: true })
+	}, [focus, filtering])
+
 	return (
 		<div
 			className={`flex flex-col bg-crust p-[clamp(8px,2.4vw,32px)] font-mono text-text ${
@@ -231,6 +241,7 @@ export function App() {
 								tabEpoch={tabEpoch}
 								onSelect={setSelected}
 								onFocus={() => setFocus('list')}
+								listRef={listRef}
 							/>
 							<DetailPane
 								section={current}

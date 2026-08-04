@@ -238,6 +238,42 @@ the previous site.
 - Selected row background and color cross-fade over `130ms`.
 - The detail caret blinks at `1.1s step-end infinite`.
 
+## Window minimize and the easter egg
+
+Added to scope after this spec was first approved, at the owner's request.
+
+The yellow traffic light minimizes the terminal window to its title bar, pinned to the
+top of the desk; everything below unmounts. The green light restores it. The red light
+stays decorative.
+
+The vacated space holds one centered line — `Yes, I am a Catppuccin enjoyer`, with
+"Catppuccin" italic in the accent and the rest in `subtext0` — followed by a blinking
+accent caret matching the detail pane's. The line rises 6px and fades in over `320ms
+cubic-bezier(0.22, 1, 0.36, 1)`, skipped under reduced motion. Type is
+`clamp(16px, 2.4vw, 26px)` at line-height 1.5.
+
+Each light is interactive only when it has something to do: the idle one carries the
+real `disabled` attribute plus `pointer-events: none`, with no hover or pointer cursor.
+The live one brightens on hover (`filter: brightness(1.25)`, `120ms`). Both carry `title`
+and `aria-label`.
+
+While minimized every TUI keybinding is suspended; only `esc`, `enter`, or `space`
+restore. One boolean of state drives the window height, the conditional body, the note,
+and both control states.
+
+`minimized` starts `false`, so the prerendered document is unaffected — all nine
+articles are still present and the easter egg does not appear in the static HTML.
+
+The request also called for re-attaching a `ResizeObserver` to the freshly mounted grid
+on restore. That applies to the HTML prototype, which needs an observer because inline
+styles cannot carry media queries. This build uses a Tailwind breakpoint, so there is no
+observer and nothing to re-measure.
+
+For the SSH build this is not applicable — a terminal window cannot minimize inside a
+terminal. If the egg should be reachable there, it goes behind an undocumented keybinding
+that swaps the detail pane for the same line, with any key returning. That is a decision
+for sub-project 2.
+
 ## State
 
 Local component state only. No routing, no data fetching.

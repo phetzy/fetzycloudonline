@@ -2130,7 +2130,287 @@ because JS-driven animation ignores the CSS property."
 
 ---
 
-### Task 10: End-to-end suite
+### Task 10: Window minimize/restore and the easter egg
+
+**Files:**
+- Modify: `src/components/TitleBar.tsx`, `src/App.tsx`, `src/App.test.tsx`, `tailwind.config.ts`
+- Create: `src/components/MinimizedNote.tsx`
+
+**Interfaces:**
+- Consumes: `prefersReducedMotion()` from Task 9.
+- Produces: `TitleBar({ dims, minimized, onMinimize, onRestore })`, `MinimizedNote()`.
+
+This scope was added after the plan was written, at the owner's request. The terminal
+window can be minimized to just its title bar, revealing an easter egg in the space it
+vacates.
+
+**One note on the request as given:** it says that on restore you must re-run the
+responsive layout measurement and re-attach a `ResizeObserver` to the freshly mounted
+grid node. That applies to the HTML prototype, which uses a ResizeObserver because
+inline styles cannot carry media queries. This build uses a Tailwind breakpoint instead
+(Task 9), so there is no observer to re-attach and nothing to re-measure — the CSS
+simply applies to the new node. No action needed; do not add an observer.
+
+**Behavior:**
+
+- The **yellow** light minimizes. The window collapses to its title bar, pinned to the
+  top of the desk. Everything below it unmounts: title block, tab bar, both panes, help
+  footer.
+- The **green** light restores.
+- The **red** light is decorative and does nothing.
+- While minimized, a single centered line sits in the vacated space:
+  `Yes, I am a Catppuccin enjoyer` — "Catppuccin" italic and in the accent, the rest in
+  `subtext0`. A blinking accent caret follows it, matching the detail pane's.
+- While minimized, every TUI keybinding is suspended. Only `esc`, `enter`, or `space`
+  restore the window. Normal bindings resume on restore.
+
+- [ ] **Step 1: Write the failing test**
+
+Add to `src/App.test.tsx`:
+
+```tsx
+test('the yellow light minimizes the window and reveals the note', async () => {
+	const user = userEvent.setup()
+	render(<App />)
+
+	expect(screen.getByRole('button', { name: '▌ readme' })).toBeInTheDocument()
+
+	await user.click(screen.getByRole('button', { name: 'Minimize the terminal window' }))
+
+	expect(screen.queryByRole('button', { name: '▌ readme' })).not.toBeInTheDocument()
+	expect(screen.getByText(/Yes, I am a/)).toBeInTheDocument()
+	expect(screen.getByText('Catppuccin')).toBeInTheDocument()
+})
+
+test('the green light restores the window', async () => {
+	const user = userEvent.setup()
+	render(<App />)
+
+	await user.click(screen.getByRole('button', { name: 'Minimize the terminal window' }))
+	await user.click(screen.getByRole('button', { name: 'Restore the terminal window' }))
+
+	expect(screen.getByRole('button', { name: '▌ readme' })).toBeInTheDocument()
+	expect(screen.queryByText(/Yes, I am a/)).not.toBeInTheDocument()
+})
+
+test('each light is disabled when it has nothing to do', async () => {
+	const user = userEvent.setup()
+	render(<App />)
+
+	expect(screen.getByRole('button', { name: 'Restore the terminal window' })).toBeDisabled()
+	expect(screen.getByRole('button', { name: 'Minimize the terminal window' })).toBeEnabled()
+
+	await user.click(screen.getByRole('button', { name: 'Minimize the terminal window' }))
+
+	expect(screen.getByRole('button', { name: 'Minimize the terminal window' })).toBeDisabled()
+	expect(screen.getByRole('button', { name: 'Restore the terminal window' })).toBeEnabled()
+})
+
+test('esc, enter, and space restore; other keys do nothing while minimized', async () => {
+	const user = userEvent.setup()
+	render(<App />)
+
+	for (const key of ['{Escape}', '{Enter}', ' ']) {
+		await user.click(screen.getByRole('button', { name: 'Minimize the terminal window' }))
+		expect(screen.getByText(/Yes, I am a/)).toBeInTheDocument()
+		await user.keyboard(key)
+		expect(screen.getByRole('button', { name: '▌ readme' })).toBeInTheDocument()
+	}
+})
+
+test('TUI keybindings are suspended while minimized', async () => {
+	const user = userEvent.setup()
+	render(<App />)
+
+	await user.click(screen.getByRole('button', { name: 'Minimize the terminal window' }))
+	await user.keyboard('j')
+	await user.keyboard('/')
+
+	// Still minimized, and no filter input appeared.
+	expect(screen.getByText(/Yes, I am a/)).toBeInTheDocument()
+	expect(screen.queryByLabelText('Filter sections')).not.toBeInTheDocument()
+})
+```
+
+- [ ] **Step 2: Run it to verify it fails**
+
+Run: `pnpm test:unit`
+Expected: FAIL — `Unable to find an accessible element with the role "button" and name "Minimize the terminal window"`.
+
+- [ ] **Step 3: Add the rise-in keyframe**
+
+In `tailwind.config.ts`, add to `keyframes` and `animation`:
+
+```ts
+risein: {
+	from: { opacity: '0', transform: 'translateY(6px)' },
+	to: { opacity: '1', transform: 'none' }
+}
+```
+
+```ts
+risein: 'risein 320ms cubic-bezier(0.22, 1, 0.36, 1)'
+```
+
+- [ ] **Step 4: Create `src/components/MinimizedNote.tsx`**
+
+```tsx
+import { prefersReducedMotion } from '../hooks/prefersReducedMotion'
+
+export function MinimizedNote() {
+	return (
+		<div className="flex flex-1 items-center justify-center">
+			<p
+				className={`text-center text-[clamp(16px,2.4vw,26px)] leading-[1.5] text-subtext0 ${
+					prefersReducedMotion() ? '' : 'animate-risein'
+				}`}
+			>
+				Yes, I am a <em className="not-italic italic text-acc">Catppuccin</em> enjoyer
+				<span
+					aria-hidden="true"
+					className="ml-[0.35em] inline-block h-[1.05em] w-[0.55em] animate-blink bg-acc align-[-0.16em]"
+				/>
+			</p>
+		</div>
+	)
+}
+```
+
+The `not-italic italic` pairing looks odd but is deliberate: Tailwind's preflight does
+not reset `<em>`, and being explicit about the intended style keeps it from depending on
+UA defaults. If your Tailwind build orders those two classes the other way, drop
+`not-italic` and keep `italic` — verify the rendered `font-style` is `italic`.
+
+- [ ] **Step 5: Give `TitleBar` its controls**
+
+Replace the traffic-light span in `src/components/TitleBar.tsx`. The lights become real
+buttons; the red one stays a decorative span.
+
+```tsx
+type Props = {
+	dims: string
+	minimized: boolean
+	onMinimize: () => void
+	onRestore: () => void
+}
+
+export function TitleBar({ dims, minimized, onMinimize, onRestore }: Props) {
+	const light = 'h-[11px] w-[11px] rounded-full transition-[filter] duration-[120ms] ease-out'
+	const live = 'cursor-pointer hover:brightness-125'
+	const inert = 'pointer-events-none'
+
+	return (
+		<div className="flex flex-none items-center gap-3 border-b border-surface0 bg-mantle px-[14px] py-[10px]">
+			<span className="flex gap-[7px]">
+				<span className={`${light} bg-red`} aria-hidden="true" />
+				<button
+					type="button"
+					onClick={onMinimize}
+					disabled={minimized}
+					title="Minimize the terminal window"
+					aria-label="Minimize the terminal window"
+					className={`${light} bg-yellow ${minimized ? inert : live}`}
+				/>
+				<button
+					type="button"
+					onClick={onRestore}
+					disabled={!minimized}
+					title="Restore the terminal window"
+					aria-label="Restore the terminal window"
+					className={`${light} bg-green ${minimized ? live : inert}`}
+				/>
+			</span>
+			<span className="flex-1 truncate text-center text-[12px] text-subtext0">
+				fetzer@boise: ~/site — go run ./cmd/fetzer
+			</span>
+			<span className="text-[11.5px] text-subtext0">{dims}</span>
+		</div>
+	)
+}
+```
+
+- [ ] **Step 6: Wire it into `src/App.tsx`**
+
+```tsx
+const [minimized, setMinimized] = useState(false)
+```
+
+The desk becomes a column flex container so the collapsed window sits at the top and the
+note centers in what is left:
+
+```tsx
+<div className="flex h-screen flex-col overflow-hidden bg-crust p-[clamp(8px,2.4vw,32px)] font-mono text-text">
+	<div
+		className={`mx-auto flex w-full max-w-[1220px] flex-col overflow-hidden rounded-[10px] border border-surface0 bg-base ${
+			minimized ? 'h-auto flex-none' : 'h-full'
+		}`}
+	>
+		<TitleBar
+			dims={dims}
+			minimized={minimized}
+			onMinimize={() => setMinimized(true)}
+			onRestore={() => setMinimized(false)}
+		/>
+		{!minimized && (
+			<div className="flex min-h-0 flex-1 flex-col gap-3 p-[clamp(12px,2vw,20px)]">
+				{/* header row, tab bar, grid, help footer — unchanged */}
+			</div>
+		)}
+	</div>
+	{minimized && <MinimizedNote />}
+</div>
+```
+
+In the keydown effect, suspend everything while minimized. Put this immediately after
+the modifier and input guards, before the existing switch:
+
+```tsx
+if (minimized) {
+	if (event.key === 'Escape' || event.key === 'Enter' || event.key === ' ') {
+		event.preventDefault()
+		setMinimized(false)
+	}
+	return
+}
+```
+
+Add `minimized` to the effect's dependency array.
+
+- [ ] **Step 7: Run the tests to verify they pass**
+
+Run: `pnpm test:unit`
+Expected: PASS.
+
+- [ ] **Step 8: Verify**
+
+Run: `pnpm lint`, `pnpm build`, `pnpm test:integration`.
+
+Confirm the no-JS document is unaffected — `minimized` starts false, so the prerender
+still contains all nine articles:
+
+```bash
+grep -o "<article" dist/index.html | wc -l   # expect 9
+grep -c "Catppuccin" dist/index.html         # expect 0
+```
+
+The easter egg must NOT appear in the prerendered HTML. If it does, `minimized` is being
+computed rather than starting at a constant `false`.
+
+- [ ] **Step 9: Commit**
+
+```bash
+git add -A
+git commit -m "feat: add window minimize/restore with an easter egg
+
+The yellow light collapses the window to its title bar and reveals a note in
+the vacated space; the green light restores it. Each light is a real disabled
+button when it has nothing to do. While minimized every TUI binding is
+suspended and only esc, enter, or space restore."
+```
+
+---
+
+### Task 11: End-to-end suite
 
 **Files:**
 - Create: `tests/tui.spec.ts`
@@ -2233,6 +2513,18 @@ test('only one article is visible after hydration', async ({ page }) => {
 	expect(visible).toBe(1)
 })
 
+test('the yellow light minimizes and the green light restores', async ({ page }) => {
+	await gotoHydrated(page)
+
+	await page.getByRole('button', { name: 'Minimize the terminal window' }).click()
+	await expect(page.getByText(/Yes, I am a/)).toBeVisible()
+	await expect(page.getByRole('button', { name: '▌ readme' })).toHaveCount(0)
+
+	await page.keyboard.press('Escape')
+	await expect(page.getByRole('button', { name: '▌ readme' })).toBeVisible()
+	await expect(page.getByText(/Yes, I am a/)).toHaveCount(0)
+})
+
 test('no horizontal overflow at a 375px viewport', async ({ page }) => {
 	await page.setViewportSize({ width: 375, height: 800 })
 	await gotoHydrated(page)
@@ -2260,7 +2552,7 @@ git commit -m "test: add the end-to-end suite for the TUI front end"
 
 ---
 
-### Task 11: README and final verification
+### Task 12: README and final verification
 
 **Files:**
 - Modify: `README.md`

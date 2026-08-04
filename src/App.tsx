@@ -13,6 +13,9 @@ export function App() {
 					{SECTIONS.map((s) => (
 						<article key={s.id}>
 							<h2>{s.title}</h2>
+							{s.paras.map((p) => (
+								<p key={p}>{p}</p>
+							))}
 						</article>
 					))}
 				</div>

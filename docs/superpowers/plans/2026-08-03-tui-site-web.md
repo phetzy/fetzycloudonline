@@ -1268,7 +1268,10 @@ const [filtering, setFiltering] = useState(false)
 const [filter, setFilter] = useState('')
 ```
 
-Replace the placeholder article list with a grid containing `ListPane` on the left; the detail pane arrives in Task 6:
+Wrap the existing content in a grid with `ListPane` on the left. **Keep the placeholder
+article list as the grid's second column** — Task 6 replaces it with the real
+`DetailPane`. Do not drop it: `tests/no-js.spec.ts` asserts nine articles and the OSS
+paragraph are present, and removing the articles turns the suite red for three tasks.
 
 ```tsx
 <div className="grid min-h-0 flex-1 grid-cols-1 gap-[14px] md:grid-cols-[minmax(0,26ch)_minmax(0,1fr)]">
@@ -1281,6 +1284,17 @@ Replace the placeholder article list with a grid containing `ListPane` on the le
 		onSelect={setSelected}
 		onFocus={() => setFocus('list')}
 	/>
+	{/* Placeholder until Task 6 lands DetailPane. Keeps the no-JS document complete. */}
+	<div className="min-h-0 overflow-y-auto">
+		{SECTIONS.map((s) => (
+			<article key={s.id}>
+				<h2>{s.title}</h2>
+				{s.paras.map((p) => (
+					<p key={p}>{p}</p>
+				))}
+			</article>
+		))}
+	</div>
 </div>
 ```
 

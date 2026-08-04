@@ -21,7 +21,8 @@ const (
 // Styles holds every lipgloss style used by the TUI, built once from the
 // Catppuccin Macchiato palette above.
 type Styles struct {
-	Title string
+	Title    lipgloss.Style
+	TitleSub lipgloss.Style
 
 	TabActive   lipgloss.Style
 	TabInactive lipgloss.Style
@@ -48,7 +49,12 @@ func NewStyles() Styles {
 		Padding(0, 1)
 
 	return Styles{
-		Title: "",
+		Title: lipgloss.NewStyle().
+			Foreground(colAccent).
+			Bold(true),
+
+		TitleSub: lipgloss.NewStyle().
+			Foreground(colSubtext0),
 
 		TabActive: lipgloss.NewStyle().
 			Foreground(colBase).

@@ -203,3 +203,65 @@ test('a filter with no match reports no match', async () => {
 	await user.type(screen.getByLabelText('Filter sections'), 'zzzzqqq')
 	expect(screen.getByText('no match')).toBeInTheDocument()
 })
+
+test('the yellow light minimizes the window and reveals the note', async () => {
+	const user = userEvent.setup()
+	render(<App />)
+
+	expect(screen.getByRole('button', { name: '▌ readme' })).toBeInTheDocument()
+
+	await user.click(screen.getByRole('button', { name: 'Minimize the terminal window' }))
+
+	expect(screen.queryByRole('button', { name: '▌ readme' })).not.toBeInTheDocument()
+	expect(screen.getByText(/Yes, I am a/)).toBeInTheDocument()
+	expect(screen.getByText('Catppuccin')).toBeInTheDocument()
+})
+
+test('the green light restores the window', async () => {
+	const user = userEvent.setup()
+	render(<App />)
+
+	await user.click(screen.getByRole('button', { name: 'Minimize the terminal window' }))
+	await user.click(screen.getByRole('button', { name: 'Restore the terminal window' }))
+
+	expect(screen.getByRole('button', { name: '▌ readme' })).toBeInTheDocument()
+	expect(screen.queryByText(/Yes, I am a/)).not.toBeInTheDocument()
+})
+
+test('each light is disabled when it has nothing to do', async () => {
+	const user = userEvent.setup()
+	render(<App />)
+
+	expect(screen.getByRole('button', { name: 'Restore the terminal window' })).toBeDisabled()
+	expect(screen.getByRole('button', { name: 'Minimize the terminal window' })).toBeEnabled()
+
+	await user.click(screen.getByRole('button', { name: 'Minimize the terminal window' }))
+
+	expect(screen.getByRole('button', { name: 'Minimize the terminal window' })).toBeDisabled()
+	expect(screen.getByRole('button', { name: 'Restore the terminal window' })).toBeEnabled()
+})
+
+test('esc, enter, and space restore; other keys do nothing while minimized', async () => {
+	const user = userEvent.setup()
+	render(<App />)
+
+	for (const key of ['{Escape}', '{Enter}', ' ']) {
+		await user.click(screen.getByRole('button', { name: 'Minimize the terminal window' }))
+		expect(screen.getByText(/Yes, I am a/)).toBeInTheDocument()
+		await user.keyboard(key)
+		expect(screen.getByRole('button', { name: '▌ readme' })).toBeInTheDocument()
+	}
+})
+
+test('TUI keybindings are suspended while minimized', async () => {
+	const user = userEvent.setup()
+	render(<App />)
+
+	await user.click(screen.getByRole('button', { name: 'Minimize the terminal window' }))
+	await user.keyboard('j')
+	await user.keyboard('/')
+
+	// Still minimized, and no filter input appeared.
+	expect(screen.getByText(/Yes, I am a/)).toBeInTheDocument()
+	expect(screen.queryByLabelText('Filter sections')).not.toBeInTheDocument()
+})

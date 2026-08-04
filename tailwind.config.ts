@@ -47,13 +47,18 @@ export default {
 				slidex: {
 					from: { opacity: '0', transform: 'translateX(-10px)' },
 					to: { opacity: '1', transform: 'none' }
+				},
+				risein: {
+					from: { opacity: '0', transform: 'translateY(6px)' },
+					to: { opacity: '1', transform: 'none' }
 				}
 			},
 			animation: {
 				blink: 'blink 1.1s step-end infinite',
 				slidedown: 'slidedown 170ms cubic-bezier(0.22, 1, 0.36, 1)',
 				slideup: 'slideup 170ms cubic-bezier(0.22, 1, 0.36, 1)',
-				slidex: 'slidex 190ms cubic-bezier(0.22, 1, 0.36, 1) both'
+				slidex: 'slidex 190ms cubic-bezier(0.22, 1, 0.36, 1) both',
+				risein: 'risein 320ms cubic-bezier(0.22, 1, 0.36, 1)'
 			}
 		}
 	},

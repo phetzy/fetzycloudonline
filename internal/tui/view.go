@@ -82,7 +82,7 @@ func (m Model) computeLayout() frameLayout {
 
 	fixed := lipgloss.Height(m.renderTitle(w)) +
 		lipgloss.Height(m.renderTabBar(w)) +
-		lipgloss.Height(m.renderHelp())
+		lipgloss.Height(m.renderFooter(w))
 	mainH := h - fixed
 	if mainH < paneBorderOverhead+1 {
 		mainH = paneBorderOverhead + 1
@@ -162,9 +162,28 @@ func (m Model) renderTabBar(width int) string {
 }
 
 // renderHelp is the key-binding footer, generated from the same KeyMap that
-// handles input so it cannot drift from actual behavior.
+// handles input so it cannot drift from actual behavior. While the filter
+// input is open it is replaced by renderFilterBar — see View.
 func (m Model) renderHelp() string {
 	return m.styles.Help.Render(m.help.View(m.keys))
+}
+
+// renderFilterBar is the footer shown while the filter input is open,
+// mirroring the design reference's "filter> " prompt and live query.
+func (m Model) renderFilterBar(width int) string {
+	prompt := lipgloss.NewStyle().Foreground(colGreen).Render("filter> ")
+	query := m.styles.Help.Render(m.filter)
+	return truncateToWidth(prompt+query, width)
+}
+
+// renderFooter is the frame's bottom line: the filter input while it is
+// open, the key-binding help otherwise. Both are always exactly one line,
+// so which one is showing does not change computeLayout's fixed height.
+func (m Model) renderFooter(width int) string {
+	if m.filtering {
+		return m.renderFilterBar(width)
+	}
+	return m.renderHelp()
 }
 
 // renderListPane renders the section list: one line per visible section,
@@ -294,7 +313,7 @@ func (m Model) View() string {
 
 	title := m.renderTitle(w)
 	tabs := m.renderTabBar(w)
-	helpFooter := m.renderHelp()
+	helpFooter := m.renderFooter(w)
 
 	list := m.renderListPane(lay.listOuterW, lay.listOuterH, m.focus == FocusList)
 	detail := m.renderDetailPane(lay.detailOuterW, lay.detailOuterH, m.focus == FocusViewport)

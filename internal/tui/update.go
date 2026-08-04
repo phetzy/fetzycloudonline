@@ -24,7 +24,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // select the new tab's first section; g/G jump to the ends; selection never
 // wraps.
 func (m Model) handleKey(msg tea.KeyMsg) Model {
+	// While the filter input is open, every keystroke belongs to it — j/k
+	// included — so this branch must run before any navigation case gets a
+	// chance to claim them.
+	if m.filtering {
+		return m.handleFilterKey(msg)
+	}
+
 	switch {
+	case key.Matches(msg, m.keys.Filter):
+		m.filtering = true
+		return m
 	case key.Matches(msg, m.keys.NextTab):
 		return m.switchTab(1)
 	case key.Matches(msg, m.keys.PrevTab):
@@ -48,6 +58,66 @@ func (m Model) handleKey(msg tea.KeyMsg) Model {
 	case key.Matches(msg, m.keys.PageUp):
 		return m.page(-1)
 	}
+	return m
+}
+
+// handleFilterKey dispatches a keystroke while the filter input is open.
+// Escape cancels: it closes the input and clears the query, but does not
+// rewind the tab or selection to wherever they were before — the visitor
+// stays where the filter carried them, matching the prototype. Enter closes
+// the input and keeps the query. Backspace and printable runes edit the
+// query and re-run the cross-tab search each time.
+func (m Model) handleFilterKey(msg tea.KeyMsg) Model {
+	switch {
+	case key.Matches(msg, m.keys.Cancel):
+		m.filtering = false
+		m.filter = ""
+		return m
+	case key.Matches(msg, m.keys.Accept):
+		m.filtering = false
+		return m
+	case msg.Type == tea.KeyBackspace:
+		if r := []rune(m.filter); len(r) > 0 {
+			m.filter = string(r[:len(r)-1])
+		}
+		return m.reselectAfterFilterChange()
+	case msg.Type == tea.KeyRunes:
+		m.filter += string(msg.Runes)
+		return m.reselectAfterFilterChange()
+	}
+	return m
+}
+
+// reselectAfterFilterChange mirrors the web build's onFilter: whenever the
+// query changes, if the current selection fell out of the now-narrower
+// cross-tab list, jump to the first remaining match — switching the active
+// tab to match it, since that match may live on another tab entirely.
+func (m Model) reselectAfterFilterChange() Model {
+	visible := m.visibleSections()
+	if len(visible) == 0 {
+		return m
+	}
+	for _, s := range visible {
+		if s.ID == m.selected {
+			return m
+		}
+	}
+	return m.selectAcrossTabs(visible[0])
+}
+
+// selectAcrossTabs selects s, switching the active tab to the one s belongs
+// to if it differs from the current one. Filtering while the input is open
+// searches every section, so a match can live on a tab other than the one
+// currently on screen.
+func (m Model) selectAcrossTabs(s site.Section) Model {
+	for i, t := range m.content.Tabs {
+		if t.ID == s.Tab {
+			m.tabIdx = i
+			break
+		}
+	}
+	m.selected = s.ID
+	m.syncViewport()
 	return m
 }
 
@@ -143,6 +213,7 @@ func (m Model) switchTab(delta int) Model {
 	m.tabIdx = ((m.tabIdx+delta)%n + n) % n
 	m.selected = FirstSectionOfTab(m.content, m.currentTab()).ID
 	m.focus = FocusList
+	m.filter = "" // switching tabs clears the filter — do not strand the list on "no match".
 	m.syncViewport()
 	return m
 }

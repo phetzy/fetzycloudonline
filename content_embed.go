@@ -1,10 +1,10 @@
 // Package site embeds the content shared by the web front end and the SSH TUI.
 //
-// This file lives at the module root rather than under internal/ because
-// go:embed cannot reference a path outside its own package directory, and
-// content.json must stay where the web build reads it. Copying it into the Go
-// tree at build time would create a second source of truth, which is exactly
-// what sharing the file is meant to prevent.
+// This file lives at the module root rather than under internal/ because the
+// embed directive cannot reference a path outside its own package directory,
+// and content.json must stay where the web build reads it. Copying it into
+// the Go tree at build time would create a second source of truth, which is
+// exactly what sharing the file is meant to prevent.
 package site
 
 import (

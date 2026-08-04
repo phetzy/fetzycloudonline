@@ -226,6 +226,15 @@ type sessionGateContextKey struct{}
 // sessionGate caps a single TCP connection to one granted session channel.
 type sessionGate struct {
 	count atomic.Int32
+
+	// rejectionLogged ensures sessionRequestCallback logs at most one
+	// "session rejected" line per connection, no matter how many requests
+	// the client sends on however many channels it opens. Without this, a
+	// client that gets its one legitimate channel and then sends channel
+	// requests on it at packet rate — no reconnect, no new channel, so
+	// neither the per-IP limiter nor the channel-open cap ever sees it —
+	// could log at whatever rate it sends requests.
+	rejectionLogged atomic.Bool
 }
 
 // allow reports whether this call is the first to succeed for this gate.
@@ -265,11 +274,17 @@ func sessionRequestCallback(logger *slog.Logger) ssh.SessionRequestCallback {
 		}
 
 		if !gate.allow() {
-			logger.Warn("session rejected",
-				"remote_addr", sess.RemoteAddr().String(),
-				"reason", "connection already has a granted session channel",
-				"request_type", requestType,
-			)
+			// Every request is still rejected; only the logging is capped —
+			// CompareAndSwap(false, true) succeeds for exactly one goroutine
+			// per gate, so this connection logs at most one line here
+			// regardless of how many rejected requests it sends.
+			if gate.rejectionLogged.CompareAndSwap(false, true) {
+				logger.Warn("session rejected",
+					"remote_addr", sess.RemoteAddr().String(),
+					"reason", "connection already has a granted session channel",
+					"request_type", requestType,
+				)
+			}
 			return false
 		}
 

@@ -120,6 +120,135 @@ func (c *int32Counter) load() int {
 	return c.n
 }
 
+// --- sessionRequestCallback: rejection logging capped at once per connection ---
+
+// fakeSSHContext is a minimal ssh.Context: just enough of context.Context,
+// sync.Locker, and ssh.Context's own methods to carry a value map, since
+// that's all sessionRequestCallback's fallback path and sessionGate lookup
+// need. The unimplemented accessors (User, SessionID, ...) are never called
+// by the code under test.
+type fakeSSHContext struct {
+	mu     sync.Mutex
+	values map[interface{}]interface{}
+}
+
+func newFakeSSHContext() *fakeSSHContext {
+	return &fakeSSHContext{values: map[interface{}]interface{}{}}
+}
+
+func (c *fakeSSHContext) Deadline() (time.Time, bool)   { return time.Time{}, false }
+func (c *fakeSSHContext) Done() <-chan struct{}         { return nil }
+func (c *fakeSSHContext) Err() error                    { return nil }
+func (c *fakeSSHContext) Lock()                         { c.mu.Lock() }
+func (c *fakeSSHContext) Unlock()                       { c.mu.Unlock() }
+func (c *fakeSSHContext) User() string                  { return "" }
+func (c *fakeSSHContext) SessionID() string             { return "" }
+func (c *fakeSSHContext) ClientVersion() string         { return "" }
+func (c *fakeSSHContext) ServerVersion() string         { return "" }
+func (c *fakeSSHContext) RemoteAddr() net.Addr          { return fakeAddr("203.0.113.9:1") }
+func (c *fakeSSHContext) LocalAddr() net.Addr           { return fakeAddr("203.0.113.1:22") }
+func (c *fakeSSHContext) Permissions() *ssh.Permissions { return nil }
+
+func (c *fakeSSHContext) Value(key interface{}) interface{} {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.values[key]
+}
+
+func (c *fakeSSHContext) SetValue(key, value interface{}) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.values[key] = value
+}
+
+// fakeSession embeds the (nil) ssh.Session interface so it satisfies every
+// method that interface requires without implementing all of them — only
+// Context() and RemoteAddr(), the two sessionRequestCallback actually
+// calls, are overridden. Any other method would panic on the nil embed,
+// which is the point: it fails loudly if the code under test starts relying
+// on something this fake doesn't provide.
+type fakeSession struct {
+	ssh.Session
+	ctx ssh.Context
+}
+
+func (f fakeSession) Context() ssh.Context { return f.ctx }
+func (f fakeSession) RemoteAddr() net.Addr { return fakeAddr("203.0.113.9:1") }
+
+// TestSessionRequestCallbackLogsRejectionOnceRegardlessOfRequestCount is the
+// regression test for the request-rate log-amplification gap: once a
+// connection's session gate has granted its one channel, every further
+// channel request on it (a client sending "shell", "pty-req", "env", ... at
+// packet rate on the channel it already has) must still be rejected, but
+// must log at most once for the whole connection — not once per request.
+func TestSessionRequestCallbackLogsRejectionOnceRegardlessOfRequestCount(t *testing.T) {
+	var buf bytes.Buffer
+	logger := slog.New(slog.NewTextHandler(&buf, nil))
+	cb := sessionRequestCallback(logger)
+
+	ctx := newFakeSSHContext()
+	gate := &sessionGate{}
+	ctx.SetValue(sessionGateContextKey{}, gate)
+	sess := fakeSession{ctx: ctx}
+
+	if !cb(sess, "shell") {
+		t.Fatal("first request should be granted")
+	}
+
+	const rejectedRequests = 50
+	for i := 0; i < rejectedRequests; i++ {
+		if cb(sess, "shell") {
+			t.Fatalf("request %d: expected rejection, got granted", i)
+		}
+	}
+
+	got := strings.Count(buf.String(), "session rejected")
+	if got != 1 {
+		t.Errorf("logged %d \"session rejected\" lines for %d rejected requests on one connection, want 1\nlog:\n%s",
+			got, rejectedRequests, buf.String())
+	}
+}
+
+// TestSessionRequestCallbackLogsRejectionOnceUnderConcurrentRequests is the
+// concurrent counterpart: many rejected requests arriving on the same
+// connection at once must still produce exactly one log line, the same
+// property TestSessionGateConcurrentAllowGrantsExactlyOne pins for allow()
+// itself. Asserted directly against sessionGate.rejectionLogged rather than
+// parsing concurrent log output, which would need its own synchronization
+// to read safely once the goroutines below are still writing to it.
+func TestSessionRequestCallbackLogsRejectionOnceUnderConcurrentRequests(t *testing.T) {
+	var buf bytes.Buffer
+	logger := slog.New(slog.NewTextHandler(&buf, nil))
+	cb := sessionRequestCallback(logger)
+
+	ctx := newFakeSSHContext()
+	gate := &sessionGate{}
+	ctx.SetValue(sessionGateContextKey{}, gate)
+	sess := fakeSession{ctx: ctx}
+
+	if !cb(sess, "shell") {
+		t.Fatal("first request should be granted")
+	}
+
+	const n = 200
+	var wg sync.WaitGroup
+	wg.Add(n)
+	for i := 0; i < n; i++ {
+		go func() {
+			defer wg.Done()
+			cb(sess, "shell")
+		}()
+	}
+	wg.Wait()
+
+	if !gate.rejectionLogged.Load() {
+		t.Fatal("expected rejectionLogged to be set after concurrent rejected requests")
+	}
+	if got := strings.Count(buf.String(), "session rejected"); got != 1 {
+		t.Errorf("logged %d \"session rejected\" lines for %d concurrent rejected requests, want 1", got, n)
+	}
+}
+
 // --- hostOnly: IPv4 unchanged, IPv6 masked to /64 ---
 
 type fakeAddr string

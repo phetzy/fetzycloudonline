@@ -5,7 +5,11 @@
 // every session is handled exclusively by the Bubble Tea middleware. There
 // is deliberately no shell, no exec, no subsystem — a client cannot run a
 // command, open SFTP, or forward a port, because no handler exists for any
-// of those request types.
+// of those request types. A per-connection session gate additionally caps
+// each TCP connection to a single granted session channel, an unrecovered
+// panic in the session-handling path is caught before it can take down the
+// whole process, and every timeout and limit is validated to be strictly
+// positive at startup so a config typo cannot silently disable a control.
 package main
 
 import (
@@ -18,14 +22,17 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"sync/atomic"
 	"syscall"
 	"time"
+	"unicode/utf8"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/ssh"
 	"github.com/charmbracelet/wish"
 	"github.com/charmbracelet/wish/activeterm"
 	wishbubbletea "github.com/charmbracelet/wish/bubbletea"
+	wishrecover "github.com/charmbracelet/wish/recover"
 
 	site "github.com/phetzy/fetzycloudonline"
 	"github.com/phetzy/fetzycloudonline/internal/ratelimit"
@@ -36,10 +43,17 @@ import (
 // to finish on their own before the server is force-closed.
 const shutdownWindow = 10 * time.Second
 
+// maxLoggedUserLen bounds how much of the client-supplied SSH username is
+// ever written to the log. sess.User() is attacker-controlled and
+// unbounded in length; slog's TextHandler escapes it so log injection is
+// mitigated, but an unbounded field is still an unforced way to bloat logs.
+const maxLoggedUserLen = 32
+
 func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
 	cfg := parseConfig()
+	validateConfig(cfg)
 
 	content := site.MustLoad()
 	limiter := ratelimit.New(cfg.maxConnsPerIP, cfg.ratePerMin)
@@ -54,18 +68,38 @@ func main() {
 		// "add real auth later" — it is the intended, permanent behavior.
 		wish.WithPublicKeyAuth(func(ssh.Context, ssh.PublicKey) bool { return true }),
 		ssh.WrapConn(rateLimitConnCallback(logger, limiter)),
+		// Caps each TCP connection to a single granted session channel (see
+		// sessionRequestCallback doc comment for why this is needed at
+		// all: the per-IP connection limiter above bounds TCP connections,
+		// not SSH session channels, and neither charmbracelet/ssh nor
+		// x/crypto/ssh cap the latter on their own).
+		withSessionRequestCallback(sessionRequestCallback(logger)),
 		// Wish composes middleware so that the LAST one listed here runs
 		// FIRST (each wraps the next; last-in is outermost). The list below
-		// is bubbletea, activeterm, logging — which puts:
+		// is [recover-wrapped(bubbletea, activeterm), logging], which puts:
 		//
-		//   logging (outermost) -> activeterm (gate) -> bubbletea (innermost)
+		//   logging (outermost) -> recover -> activeterm (gate) -> bubbletea (innermost)
 		//
-		// in actual execution order. This gives both required properties
-		// at once: activeterm still runs before bubbletea ever sees the
-		// session (rejecting any session without a PTY), and logging wraps
-		// the ENTIRE session lifetime, so its connect line is emitted at
-		// the real start of the session and its disconnect line at the
-		// real end, with an accurate duration.
+		// in actual execution order:
+		//
+		//   - activeterm still runs before bubbletea ever sees the session
+		//     (rejecting any session without a PTY) — recover.MiddlewareWithLogger
+		//     composes its own variadic middleware list the same way Wish
+		//     does (last-in is outermost), so passing (bubbletea, activeterm)
+		//     to it puts activeterm outside bubbletea, same as before.
+		//   - Both bubbletea's and activeterm's handler bodies now run under
+		//     recover(): charmbracelet/ssh runs the session handler in a bare
+		//     goroutine with no recover of its own, and while Bubble Tea
+		//     recovers panics inside Run/Update/View, it does NOT recover a
+		//     panic in tui.New itself or in wish middleware bodies. Without
+		//     this, one bad input coercing a panic anywhere in that path
+		//     would be an unrecovered goroutine panic — the whole process
+		//     dies, taking every other live session down with it.
+		//   - logging wraps the ENTIRE session lifetime (including the
+		//     recover boundary), so its connect line is emitted at the real
+		//     start of the session and its disconnect line at the real end,
+		//     with an accurate duration, and disconnects are logged even for
+		//     a session that panicked.
 		//
 		// The naive reading of "logging -> bubbletea -> activeterm" as the
 		// literal call order instead makes logging innermost: its own
@@ -81,8 +115,10 @@ func main() {
 		// handler registered anywhere: the only way a session produces
 		// output is through this middleware chain.
 		wish.WithMiddleware(
-			wishbubbletea.Middleware(teaHandler(content)),
-			activeterm.Middleware(),
+			wishrecover.MiddlewareWithLogger(printfLogger{logger},
+				wishbubbletea.Middleware(teaHandler(content)),
+				activeterm.Middleware(),
+			),
 			loggingMiddleware(logger),
 		),
 	)
@@ -153,11 +189,95 @@ func loggingMiddleware(logger *slog.Logger) wish.Middleware {
 	return func(next ssh.Handler) ssh.Handler {
 		return func(sess ssh.Session) {
 			addr := sess.RemoteAddr().String()
+			user := truncateUTF8(sess.User(), maxLoggedUserLen)
 			start := time.Now()
-			logger.Info("session connect", "remote_addr", addr, "user", sess.User())
+			logger.Info("session connect", "remote_addr", addr, "user", user)
 			next(sess)
 			logger.Info("session disconnect", "remote_addr", addr, "duration", time.Since(start))
 		}
+	}
+}
+
+// printfLogger adapts a *slog.Logger to wish/recover's Logger interface
+// (a single Printf method), so panic reports from the recover middleware
+// go through the same structured logger as everything else.
+type printfLogger struct {
+	logger *slog.Logger
+}
+
+func (p printfLogger) Printf(format string, v ...interface{}) {
+	p.logger.Error(fmt.Sprintf(format, v...))
+}
+
+// sessionGateContextKey is the ssh.Context key under which each
+// connection's *sessionGate is stored. It is set once per TCP connection,
+// in rateLimitConnCallback, and read by sessionRequestCallback for every
+// session channel request on that connection — the same ssh.Context is
+// shared by every channel multiplexed over one connection, which is what
+// makes a per-connection cap possible here.
+type sessionGateContextKey struct{}
+
+// sessionGate caps a single TCP connection to one granted session channel.
+type sessionGate struct {
+	count atomic.Int32
+}
+
+// allow reports whether this call is the first to succeed for this gate.
+// Every subsequent call, including concurrent ones, returns false. Safe
+// for concurrent use.
+func (g *sessionGate) allow() bool {
+	return g.count.Add(1) == 1
+}
+
+// sessionRequestCallback caps each TCP connection to a single granted
+// session channel (a "shell", "exec", or "subsystem" request).
+//
+// Without this, the per-IP connection limiter in rateLimitConnCallback only
+// bounds how many TCP connections an IP can hold open — it does not bound
+// how many SSH session channels a single connection can multiplex. Neither
+// charmbracelet/ssh nor golang.org/x/crypto/ssh impose a cap of their own:
+// the server spawns a new goroutine, with its own tea.Program, Model, and
+// renderer once bubbletea's middleware runs, for every incoming session
+// channel. A handful of TCP connections from one IP could otherwise open
+// an unbounded number of session channels and exhaust memory — the
+// cheapest resource-exhaustion path available against this server, and one
+// that would otherwise silently void the concurrency cap the rate limiter
+// exists to enforce.
+func sessionRequestCallback(logger *slog.Logger) ssh.SessionRequestCallback {
+	return func(sess ssh.Session, requestType string) bool {
+		gate, ok := sess.Context().Value(sessionGateContextKey{}).(*sessionGate)
+		if !ok {
+			// Unreachable in normal operation: rateLimitConnCallback always
+			// installs a gate before any channel on the connection can be
+			// requested. Fail closed rather than silently allowing an
+			// unbounded number of sessions if that invariant is ever broken.
+			logger.Warn("session rejected",
+				"remote_addr", sess.RemoteAddr().String(),
+				"reason", "no session gate on connection context",
+			)
+			return false
+		}
+
+		if !gate.allow() {
+			logger.Warn("session rejected",
+				"remote_addr", sess.RemoteAddr().String(),
+				"reason", "connection already has a granted session channel",
+				"request_type", requestType,
+			)
+			return false
+		}
+
+		return true
+	}
+}
+
+// withSessionRequestCallback is an ssh.Option setting Server.SessionRequestCallback.
+// Wish has no built-in wrapper for this option (unlike WithPublicKeyAuth,
+// WithIdleTimeout, etc.), so it is set directly here.
+func withSessionRequestCallback(cb ssh.SessionRequestCallback) ssh.Option {
+	return func(s *ssh.Server) error {
+		s.SessionRequestCallback = cb
+		return nil
 	}
 }
 
@@ -169,8 +289,16 @@ func loggingMiddleware(logger *slog.Logger) wish.Middleware {
 // (session end, idle timeout, max-session timeout, or shutdown) — the
 // limiter's release is idempotent, so double-release from overlapping
 // close paths is safe.
+//
+// It also installs a fresh *sessionGate on the connection's ssh.Context,
+// which sessionRequestCallback uses to cap the connection to a single
+// granted session channel. This is the only point in the code that runs
+// exactly once per TCP connection with access to that connection's
+// ssh.Context, before any channel on it can be requested — installing the
+// gate anywhere else would race multiple concurrent channel requests
+// against each other to initialize it.
 func rateLimitConnCallback(logger *slog.Logger, limiter *ratelimit.Limiter) ssh.ConnCallback {
-	return func(_ ssh.Context, conn net.Conn) net.Conn {
+	return func(ctx ssh.Context, conn net.Conn) net.Conn {
 		ip := hostOnly(conn.RemoteAddr())
 
 		release, ok := limiter.Acquire(ip)
@@ -182,6 +310,8 @@ func rateLimitConnCallback(logger *slog.Logger, limiter *ratelimit.Limiter) ssh.
 			_ = conn.Close()
 			return nil
 		}
+
+		ctx.SetValue(sessionGateContextKey{}, &sessionGate{})
 
 		return &releasingConn{Conn: conn, release: release}
 	}
@@ -199,14 +329,45 @@ func (c *releasingConn) Close() error {
 }
 
 // hostOnly strips the port from addr, falling back to the full address if
-// it cannot be split (e.g. it has no port). The rate limiter keys on host
-// only so that multiple connections from the same client share a budget.
+// it cannot be split (e.g. it has no port) or is not a parseable IP. The
+// rate limiter keys on the result so that multiple connections from the
+// same client share a budget.
+//
+// IPv4 addresses are kept as-is. IPv6 addresses are masked to their /64:
+// every consumer IPv6 allocation routed to an end user is a /64, so keying
+// at the full /128 address would let anyone with such an allocation bypass
+// the per-IP cap entirely just by cycling addresses within their own /64.
+// Masking to /64 makes the limiter mean the same thing — one real-world
+// client, one budget — on both protocols.
 func hostOnly(addr net.Addr) string {
 	host, _, err := net.SplitHostPort(addr.String())
 	if err != nil {
-		return addr.String()
+		host = addr.String()
 	}
-	return host
+
+	ip := net.ParseIP(host)
+	if ip == nil {
+		return host
+	}
+
+	if v4 := ip.To4(); v4 != nil {
+		return v4.String()
+	}
+
+	return ip.Mask(net.CIDRMask(64, 128)).String()
+}
+
+// truncateUTF8 returns s, or if s is longer than maxBytes, a valid-UTF8
+// prefix of it (never splitting a multi-byte rune) with a trailing marker.
+func truncateUTF8(s string, maxBytes int) string {
+	if len(s) <= maxBytes {
+		return s
+	}
+	b := s[:maxBytes]
+	for len(b) > 0 && !utf8.ValidString(b) {
+		b = b[:len(b)-1]
+	}
+	return b + "…"
 }
 
 // config holds the server's runtime configuration, populated from flags
@@ -243,6 +404,52 @@ func parseConfig() config {
 	return cfg
 }
 
+// validateConfig rejects any configuration where a security-relevant
+// timeout or limit is non-positive, printing a clear diagnostic and
+// exiting(2) rather than starting with a control silently disabled.
+//
+// This matters specifically because zero and negative values do not fail
+// loudly downstream: an idle-timeout or max-session of 0 makes the
+// underlying ssh library's serverConn.updateDeadline fall through to
+// SetDeadline(maxDeadline); if max-session is ALSO 0, that deadline is the
+// zero time, which clears the deadline entirely — no idle timeout, no
+// session cap, connections held open forever. A non-positive
+// max-conns-per-ip or rate-per-min hits internal/ratelimit's documented
+// fail-closed behavior instead (rejects all traffic), which is safer but
+// still not something a config typo should be able to trigger silently.
+func validateConfig(cfg config) {
+	problems := configProblems(cfg)
+	if len(problems) == 0 {
+		return
+	}
+	for _, p := range problems {
+		fmt.Fprintln(os.Stderr, "error:", p)
+	}
+	fmt.Fprintln(os.Stderr, "refusing to start: a non-positive value for a security-relevant "+
+		"timeout or limit would silently disable the control it names")
+	os.Exit(2)
+}
+
+// configProblems returns a human-readable problem description for every
+// non-positive security-relevant field in cfg. Separated from
+// validateConfig so it can be unit tested without invoking os.Exit.
+func configProblems(cfg config) []string {
+	var problems []string
+	if cfg.idleTimeout <= 0 {
+		problems = append(problems, fmt.Sprintf("-idle-timeout must be positive, got %s", cfg.idleTimeout))
+	}
+	if cfg.maxSession <= 0 {
+		problems = append(problems, fmt.Sprintf("-max-session must be positive, got %s", cfg.maxSession))
+	}
+	if cfg.maxConnsPerIP <= 0 {
+		problems = append(problems, fmt.Sprintf("-max-conns-per-ip must be positive, got %d", cfg.maxConnsPerIP))
+	}
+	if cfg.ratePerMin <= 0 {
+		problems = append(problems, fmt.Sprintf("-rate-per-min must be positive, got %d", cfg.ratePerMin))
+	}
+	return problems
+}
+
 func envString(key, def string) string {
 	if v, ok := os.LookupEnv(key); ok && v != "" {
 		return v
@@ -250,22 +457,46 @@ func envString(key, def string) string {
 	return def
 }
 
+// envDuration reads key as a duration, falling back to def (with a
+// diagnostic on stderr) if the variable is unset, unparsable, or
+// non-positive. A non-positive duration is rejected here rather than only
+// caught later by validateConfig so that a bad *environment* value is
+// pinpointed by name instead of surfacing as an opaque flag-level error.
 func envDuration(key string, def time.Duration) time.Duration {
-	if v, ok := os.LookupEnv(key); ok && v != "" {
-		if d, err := time.ParseDuration(v); err == nil {
-			return d
-		}
-		fmt.Fprintf(os.Stderr, "warning: invalid duration in %s, using default\n", key)
+	v, ok := os.LookupEnv(key)
+	if !ok || v == "" {
+		return def
 	}
-	return def
+	d, err := time.ParseDuration(v)
+	switch {
+	case err != nil:
+		fmt.Fprintf(os.Stderr, "warning: invalid duration in %s (%q), using default %s\n", key, v, def)
+		return def
+	case d <= 0:
+		fmt.Fprintf(os.Stderr, "warning: %s must be positive, got %s, using default %s\n", key, d, def)
+		return def
+	default:
+		return d
+	}
 }
 
+// envInt reads key as an integer, falling back to def (with a diagnostic on
+// stderr) if the variable is unset, unparsable, or non-positive. See
+// envDuration for why non-positive values are rejected here too.
 func envInt(key string, def int) int {
-	if v, ok := os.LookupEnv(key); ok && v != "" {
-		if n, err := strconv.Atoi(v); err == nil {
-			return n
-		}
-		fmt.Fprintf(os.Stderr, "warning: invalid integer in %s, using default\n", key)
+	v, ok := os.LookupEnv(key)
+	if !ok || v == "" {
+		return def
 	}
-	return def
+	n, err := strconv.Atoi(v)
+	switch {
+	case err != nil:
+		fmt.Fprintf(os.Stderr, "warning: invalid integer in %s (%q), using default %d\n", key, v, def)
+		return def
+	case n <= 0:
+		fmt.Fprintf(os.Stderr, "warning: %s must be positive, got %d, using default %d\n", key, n, def)
+		return def
+	default:
+		return n
+	}
 }

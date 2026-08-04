@@ -76,3 +76,72 @@ test('the prompt shows the section path and branch', async () => {
 
 	expect(screen.getByText('~/site/projects/mapwright')).toBeInTheDocument()
 })
+
+test('j and k move the selection when the list has focus', async () => {
+	const user = userEvent.setup()
+	render(<App />)
+	await user.click(screen.getByRole('button', { name: 'projects' }))
+
+	await user.keyboard('j')
+	expect(screen.getByRole('button', { name: '› transfer-it-cli' })).toBeInTheDocument()
+
+	await user.keyboard('k')
+	expect(screen.getByRole('button', { name: '› mapwright' })).toBeInTheDocument()
+})
+
+test('selection does not wrap past either end', async () => {
+	const user = userEvent.setup()
+	render(<App />)
+	await user.click(screen.getByRole('button', { name: 'projects' }))
+
+	await user.keyboard('k')
+	expect(screen.getByRole('button', { name: '› mapwright' })).toBeInTheDocument()
+
+	await user.keyboard('{Shift>}G{/Shift}')
+	expect(screen.getByRole('button', { name: '› open-source' })).toBeInTheDocument()
+	await user.keyboard('j')
+	expect(screen.getByRole('button', { name: '› open-source' })).toBeInTheDocument()
+})
+
+test('g and G jump to the first and last item', async () => {
+	const user = userEvent.setup()
+	render(<App />)
+	await user.click(screen.getByRole('button', { name: 'projects' }))
+
+	await user.keyboard('{Shift>}G{/Shift}')
+	expect(screen.getByText('5/5')).toBeInTheDocument()
+
+	await user.keyboard('g')
+	expect(screen.getByText('1/5')).toBeInTheDocument()
+})
+
+test('h and l move focus between panes', async () => {
+	const user = userEvent.setup()
+	render(<App />)
+
+	await user.keyboard('l')
+	expect(screen.getByText('scroll')).toBeInTheDocument()
+
+	await user.keyboard('h')
+	expect(screen.getByText('select')).toBeInTheDocument()
+})
+
+test('tab cycles tabs forward and shift+tab backward', async () => {
+	const user = userEvent.setup()
+	render(<App />)
+
+	await user.keyboard('{Tab}')
+	expect(screen.getByRole('button', { name: '▌ projects' })).toBeInTheDocument()
+
+	await user.keyboard('{Shift>}{Tab}{/Shift}')
+	expect(screen.getByRole('button', { name: '▌ readme' })).toBeInTheDocument()
+})
+
+test('keys are ignored while a modifier is held', async () => {
+	const user = userEvent.setup()
+	render(<App />)
+	await user.click(screen.getByRole('button', { name: 'projects' }))
+
+	await user.keyboard('{Control>}j{/Control}')
+	expect(screen.getByRole('button', { name: '› mapwright' })).toBeInTheDocument()
+})

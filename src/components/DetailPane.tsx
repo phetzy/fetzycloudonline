@@ -1,3 +1,4 @@
+import type { RefObject } from 'react'
 import { SECTIONS, type Section } from '../content'
 import { Prompt } from './Prompt'
 
@@ -6,9 +7,10 @@ type Props = {
 	focused: boolean
 	hydrated: boolean
 	onFocus: () => void
+	viewportRef: RefObject<HTMLDivElement | null>
 }
 
-export function DetailPane({ section, focused, hydrated, onFocus }: Props) {
+export function DetailPane({ section, focused, hydrated, onFocus, viewportRef }: Props) {
 	return (
 		<div
 			className={`flex min-h-0 flex-col overflow-hidden rounded-[6px] border bg-mantle ${
@@ -16,7 +18,12 @@ export function DetailPane({ section, focused, hydrated, onFocus }: Props) {
 			}`}
 		>
 			<Prompt section={section} />
-			<div data-vp onClick={onFocus} className="flex-1 overflow-y-auto p-[clamp(14px,2vw,22px)]">
+			<div
+				data-vp
+				ref={viewportRef}
+				onClick={onFocus}
+				className="flex-1 overflow-y-auto p-[clamp(14px,2vw,22px)]"
+			>
 				{SECTIONS.map((s) => (
 					<article
 						key={s.id}

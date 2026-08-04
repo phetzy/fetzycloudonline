@@ -1,4 +1,5 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { DetailPane } from './components/DetailPane'
 import { HeaderRow } from './components/HeaderRow'
 import { ListPane } from './components/ListPane'
 import { TabBar } from './components/TabBar'
@@ -12,6 +13,12 @@ export function App() {
 	const [tab, setTab] = useState<TabId>('readme')
 	const [selected, setSelected] = useState('readme')
 	const [focus, setFocus] = useState<'list' | 'viewport'>('list')
+	const [hydrated, setHydrated] = useState(false)
+	// Deliberate SSR-hydration flag: server and first client render must agree
+	// (both false), so this is the one legitimate case for setState in an
+	// effect with no dependencies.
+	// eslint-disable-next-line react-hooks/set-state-in-effect
+	useEffect(() => setHydrated(true), [])
 	// Become state in Task 8, when the filter input lands.
 	const filter = ''
 	const filtering = false
@@ -23,6 +30,7 @@ export function App() {
 
 	const visible = visibleSections(tab, filter, filtering)
 	const status = listStatus(visible, selected, filter)
+	const current = SECTIONS.find((s) => s.id === selected) ?? SECTIONS[0]
 
 	return (
 		<div className="h-screen overflow-hidden bg-crust p-[clamp(8px,2.4vw,32px)] font-mono text-text">
@@ -41,17 +49,12 @@ export function App() {
 							onSelect={setSelected}
 							onFocus={() => setFocus('list')}
 						/>
-						{/* Placeholder until Task 6 lands DetailPane. Keeps the no-JS document complete. */}
-						<div className="min-h-0 overflow-y-auto">
-							{SECTIONS.map((s) => (
-								<article key={s.id}>
-									<h2>{s.title}</h2>
-									{s.paras.map((p) => (
-										<p key={p}>{p}</p>
-									))}
-								</article>
-							))}
-						</div>
+						<DetailPane
+							section={current}
+							focused={focus === 'viewport'}
+							hydrated={hydrated}
+							onFocus={() => setFocus('viewport')}
+						/>
 					</div>
 				</div>
 			</div>

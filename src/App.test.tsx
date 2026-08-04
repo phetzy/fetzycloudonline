@@ -5,8 +5,8 @@ import { App } from './App'
 test('renders the title block and metadata', () => {
 	render(<App />)
 	expect(screen.getByText('DAVID FETZER')).toBeInTheDocument()
-	expect(screen.getByText('software engineer · boise, id · remote')).toBeInTheDocument()
-	expect(screen.getByText(/Software Engineer at C1/)).toBeInTheDocument()
+	expect(screen.getAllByText('software engineer · boise, id · remote').length).toBeGreaterThan(0)
+	expect(screen.getAllByText(/Software Engineer at C1/).length).toBeGreaterThan(0)
 })
 
 test('renders four tabs with readme active', () => {
@@ -43,4 +43,35 @@ test('clicking a list row selects it', async () => {
 
 	expect(screen.getByRole('button', { name: '› transfer-it-cli' })).toBeInTheDocument()
 	expect(screen.getByText('2/5')).toBeInTheDocument()
+})
+
+test('renders every section as an article', () => {
+	const { container } = render(<App />)
+	expect(container.querySelectorAll('article')).toHaveLength(9)
+})
+
+test('after hydration only the selected article is visible', async () => {
+	render(<App />)
+	// The mount effect has run by the time render() returns.
+	const articles = screen.getAllByRole('article', { hidden: true })
+	const visible = articles.filter((a) => !a.hasAttribute('hidden'))
+	expect(visible).toHaveLength(1)
+	expect(visible[0]).toHaveAttribute('id', 'section-readme')
+})
+
+test('the detail pane shows the selected section', async () => {
+	const user = userEvent.setup()
+	render(<App />)
+	await user.click(screen.getByRole('button', { name: 'projects' }))
+
+	expect(screen.getByRole('heading', { name: 'mapwright', level: 2 })).toBeVisible()
+	expect(screen.getByText('self-hosted map infrastructure · mapwright.io')).toBeVisible()
+})
+
+test('the prompt shows the section path and branch', async () => {
+	const user = userEvent.setup()
+	render(<App />)
+	await user.click(screen.getByRole('button', { name: 'projects' }))
+
+	expect(screen.getByText('~/site/projects/mapwright')).toBeInTheDocument()
 })

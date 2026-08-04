@@ -1274,11 +1274,15 @@ Change `<TabBar tab={tab} onSelect={setTab} />` to `onSelect={selectTab}` so swi
 tab also selects that tab's first section. Import `useCallback`, and `firstSectionOfTab`
 from `./selectors`.
 
-For now `filter` is `''` and `filtering` is `false` — declare them as state here so Task 8 only has to wire the input:
+`visibleSections` and `listStatus` need a filter and a filtering flag, but nothing can
+change them until Task 8 adds the input. Declare them as plain constants for now —
+declaring them as state here would leave `pnpm lint` failing on unused setters, which is
+the same mistake that cost Task 4 a fix round:
 
 ```tsx
-const [filtering, setFiltering] = useState(false)
-const [filter, setFilter] = useState('')
+// Become state in Task 8, when the filter input lands.
+const filter = ''
+const filtering = false
 ```
 
 Wrap the existing content in a grid with `ListPane` on the left. **Keep the placeholder
@@ -1821,7 +1825,7 @@ test('the filter searches every tab, not just the active one', async () => {
 	expect(screen.getByRole('button', { name: '› stack' })).toBeInTheDocument()
 })
 
-test('escape cancels the filter and clears it', async () => {
+test('escape cancels the filter and clears it, leaving you where it carried you', async () => {
 	const user = userEvent.setup()
 	render(<App />)
 
@@ -1830,7 +1834,10 @@ test('escape cancels the filter and clears it', async () => {
 	await user.keyboard('{Escape}')
 
 	expect(screen.queryByLabelText('Filter sections')).not.toBeInTheDocument()
-	expect(screen.getByText('1/1')).toBeInTheDocument()
+	// Typing crossed from readme into projects and selected mapwright. Esc clears
+	// the filter but does NOT rewind the tab or selection — matching the
+	// prototype, whose Escape sets only `filtering: false, filter: ''`.
+	expect(screen.getByText('1/5')).toBeInTheDocument()
 })
 
 test('enter keeps the filter and closes the input', async () => {
@@ -1926,6 +1933,15 @@ export function HelpFooter({
 ```
 
 - [ ] **Step 4: Wire the filter into `src/App.tsx`**
+
+First promote the two placeholder constants from Task 5 into real state — this is the
+task where something can finally change them:
+
+```tsx
+// was: const filter = ''  /  const filtering = false
+const [filter, setFilter] = useState('')
+const [filtering, setFiltering] = useState(false)
+```
 
 ```tsx
 const filterRef = useRef<HTMLInputElement>(null)

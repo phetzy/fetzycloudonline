@@ -76,16 +76,6 @@ func (m Model) Init() tea.Cmd {
 	return nil
 }
 
-// Update satisfies tea.Model. Navigation, filtering, and link reveal are
-// later tasks; for now this only tracks the terminal size.
-func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		return m.SetSize(msg.Width, msg.Height), nil
-	}
-	return m, nil
-}
-
 // SetSize records the terminal dimensions and resizes the bubbles
 // components accordingly. Every layout dimension in view.go derives from
 // this — nothing is hardcoded to a particular terminal size.

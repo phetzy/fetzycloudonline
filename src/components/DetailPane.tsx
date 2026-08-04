@@ -39,6 +39,7 @@ export function DetailPane({ section, focused, hydrated, direction, onFocus, vie
 			<Prompt section={section} />
 			<div
 				data-vp
+				data-testid="detail-viewport"
 				ref={viewportRef}
 				onClick={onFocus}
 				className="flex-1 overflow-y-auto p-[clamp(14px,2vw,22px)]"

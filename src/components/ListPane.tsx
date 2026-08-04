@@ -59,7 +59,13 @@ export function ListPane({
 			<div className="flex-none border-b border-surface0 px-3 py-2 text-[11.5px] tracking-[0.1em] text-subtext0">
 				{tab.toUpperCase()}
 			</div>
-			<div data-vp ref={boxRef} onClick={onFocus} className="flex-1 overflow-y-auto py-[6px]">
+			<div
+				data-vp
+				data-testid="list-viewport"
+				ref={boxRef}
+				onClick={onFocus}
+				className="flex-1 overflow-y-auto py-[6px]"
+			>
 				{sections.map((s) => {
 					const active = s.id === selectedId
 					return (

@@ -2473,11 +2473,15 @@ test('the detail pane scrolls independently of the list', async ({ page }) => {
 	await page.keyboard.press('l') // focus viewport
 	await page.keyboard.press('G')
 
-	const scrolled = await page.evaluate(() => {
-		const panes = document.querySelectorAll('[data-vp]')
-		return (panes[1] as HTMLElement).scrollTop
-	})
-	expect(scrolled).toBeGreaterThan(0)
+	// Target the detail viewport by testid, not by position among [data-vp]
+	// elements — a positional index would silently read the list's scroller
+	// if the panes were ever reordered, and could pass by coincidence because
+	// the list has its own scroll-into-view behavior.
+	const detail = page.getByTestId('detail-viewport')
+	expect(await detail.evaluate((el) => el.scrollTop)).toBeGreaterThan(0)
+
+	const list = page.getByTestId('list-viewport')
+	expect(await list.evaluate((el) => el.scrollTop)).toBe(0)
 })
 
 test('j and k move the selection, and the status follows', async ({ page }) => {
@@ -2536,9 +2540,24 @@ test('the yellow light minimizes and the green light restores', async ({ page })
 	await expect(page.getByText(/Yes, I am a/)).toBeVisible()
 	await expect(page.getByRole('button', { name: '▌ readme' })).toHaveCount(0)
 
-	await page.keyboard.press('Escape')
+	// Click the green light itself. Restoring via esc goes through a different
+	// code path (the window keydown handler), so pressing esc here would leave
+	// the button's own onClick wiring untested despite this test's name.
+	await page.getByRole('button', { name: 'Restore the terminal window' }).click()
 	await expect(page.getByRole('button', { name: '▌ readme' })).toBeVisible()
 	await expect(page.getByText(/Yes, I am a/)).toHaveCount(0)
+})
+
+test('esc, enter, and space each restore a minimized window', async ({ page }) => {
+	await gotoHydrated(page)
+
+	for (const key of ['Escape', 'Enter', ' ']) {
+		await page.getByRole('button', { name: 'Minimize the terminal window' }).click()
+		await expect(page.getByText(/Yes, I am a/)).toBeVisible()
+
+		await page.keyboard.press(key)
+		await expect(page.getByRole('button', { name: '▌ readme' })).toBeVisible()
+	}
 })
 
 test('no horizontal overflow at a 375px viewport', async ({ page }) => {

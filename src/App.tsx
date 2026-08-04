@@ -1,13 +1,27 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { HeaderRow } from './components/HeaderRow'
+import { ListPane } from './components/ListPane'
 import { TabBar } from './components/TabBar'
 import { TitleBar } from './components/TitleBar'
 import { SECTIONS, type TabId } from './content'
 import { useTerminalDims } from './hooks/useTerminalDims'
+import { firstSectionOfTab, listStatus, visibleSections } from './selectors'
 
 export function App() {
 	const dims = useTerminalDims()
 	const [tab, setTab] = useState<TabId>('readme')
+	const [selected, setSelected] = useState('readme')
+	const [focus, setFocus] = useState<'list' | 'viewport'>('list')
+	const [filtering, setFiltering] = useState(false)
+	const [filter, setFilter] = useState('')
+
+	const selectTab = useCallback((t: TabId) => {
+		setTab(t)
+		setSelected(firstSectionOfTab(t).id)
+	}, [])
+
+	const visible = visibleSections(tab, filter, filtering)
+	const status = listStatus(visible, selected, filter)
 
 	return (
 		<div className="h-screen overflow-hidden bg-crust p-[clamp(8px,2.4vw,32px)] font-mono text-text">
@@ -15,15 +29,29 @@ export function App() {
 				<TitleBar dims={dims} />
 				<div className="flex min-h-0 flex-1 flex-col gap-3 p-[clamp(12px,2vw,20px)]">
 					<HeaderRow />
-					<TabBar tab={tab} onSelect={setTab} />
-					{SECTIONS.map((s) => (
-						<article key={s.id}>
-							<h2>{s.title}</h2>
-							{s.paras.map((p) => (
-								<p key={p}>{p}</p>
+					<TabBar tab={tab} onSelect={selectTab} />
+					<div className="grid min-h-0 flex-1 grid-cols-1 gap-[14px] md:grid-cols-[minmax(0,26ch)_minmax(0,1fr)]">
+						<ListPane
+							tab={tab}
+							sections={visible}
+							selectedId={selected}
+							focused={focus === 'list'}
+							status={status}
+							onSelect={setSelected}
+							onFocus={() => setFocus('list')}
+						/>
+						{/* Placeholder until Task 6 lands DetailPane. Keeps the no-JS document complete. */}
+						<div className="min-h-0 overflow-y-auto">
+							{SECTIONS.map((s) => (
+								<article key={s.id}>
+									<h2>{s.title}</h2>
+									{s.paras.map((p) => (
+										<p key={p}>{p}</p>
+									))}
+								</article>
 							))}
-						</article>
-					))}
+						</div>
+					</div>
 				</div>
 			</div>
 		</div>

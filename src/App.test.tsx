@@ -23,3 +23,24 @@ test('clicking a tab makes it active', async () => {
 	await user.click(screen.getByRole('button', { name: 'projects' }))
 	expect(screen.getByRole('button', { name: '▌ projects' })).toBeInTheDocument()
 })
+
+test('the list shows the active tab name and its sections', async () => {
+	const user = userEvent.setup()
+	render(<App />)
+	await user.click(screen.getByRole('button', { name: 'projects' }))
+
+	expect(screen.getByText('PROJECTS')).toBeInTheDocument()
+	expect(screen.getByRole('button', { name: '› mapwright' })).toBeInTheDocument()
+	expect(screen.getByRole('button', { name: 'transfer-it-cli' })).toBeInTheDocument()
+	expect(screen.getByText('1/5')).toBeInTheDocument()
+})
+
+test('clicking a list row selects it', async () => {
+	const user = userEvent.setup()
+	render(<App />)
+	await user.click(screen.getByRole('button', { name: 'projects' }))
+	await user.click(screen.getByRole('button', { name: 'transfer-it-cli' }))
+
+	expect(screen.getByRole('button', { name: '› transfer-it-cli' })).toBeInTheDocument()
+	expect(screen.getByText('2/5')).toBeInTheDocument()
+})

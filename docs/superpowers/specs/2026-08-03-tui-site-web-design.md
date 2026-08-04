@@ -52,8 +52,13 @@ implementation is removed rather than left alongside the new one:
 loader over `content.json` — so it is rewritten rather than merely deleted),
 `src/components/` (Section, rows, TerminalButton, StatusBar, Overlay, CopyButton and
 their tests), `src/hooks/` (useManualNav, useScrollPercent, useSearch and their
-tests), `tests/manual.spec.ts`, `tests/no-js.spec.ts`, and the manual site's favicons
-in `public/favicons/`.
+tests), `tests/manual.spec.ts`, and `tests/no-js.spec.ts`.
+
+`public/favicons/` stays — the handoff ships the same caret mark already installed.
+
+`src/hooks/prefersReducedMotion.ts` is **kept and extended**. It already exposes
+`scrollBehavior()` with the SSR guard this design needs; the motion work adds a
+`prefersReducedMotion()` boolean alongside it rather than writing a second module.
 
 ## What is kept
 
@@ -281,9 +286,11 @@ for most inbound traffic:
 - `og:url` and `og:image` remain absent pending a production image; the current site's
   TODO comment carries forward
 
-Favicons come from the handoff's `favicons/` directory, replacing the previous set,
-wired per its README: SVG, 16/32 PNG, 180 apple-touch-icon, and a manifest carrying
-192 and 512.
+Favicons need no work. The handoff's `favicons/` directory is byte-identical to the
+set already installed at `public/favicons/` (verified by checksum across all seven
+files), and the existing `index.html` links and `site.webmanifest` already match its
+README. The caret mark carries over unchanged; only the manifest's `name` and
+`short_name` are revisited alongside the new `<title>`.
 
 ## Testing
 

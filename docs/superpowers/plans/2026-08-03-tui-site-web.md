@@ -1111,15 +1111,15 @@ Add the imports and a `tab` state, and render `HeaderRow` and `TabBar` above the
 
 ```tsx
 const [tab, setTab] = useState<TabId>('readme')
-const [selected, setSelected] = useState('readme')
-
-const selectTab = useCallback((t: TabId) => {
-	setTab(t)
-	setSelected(firstSectionOfTab(t).id)
-}, [])
 ```
 
-Render `<HeaderRow />` then `<TabBar tab={tab} onSelect={selectTab} />` inside the body div, before the articles. Import `useCallback` and `useState` from React, `TabId` from `./content`, and `firstSectionOfTab` from `./selectors`. `selected` is unused until Task 5 — keep it.
+Render `<HeaderRow />` then `<TabBar tab={tab} onSelect={setTab} />` inside the body div,
+**above the existing placeholder articles** — do not replace them, `tests/no-js.spec.ts`
+depends on them. Import `useState` from React and `TabId` from `./content`.
+
+Only `tab` is declared here. Task 5 adds `selected` along with the `selectTab` callback
+that keeps the two in step — declaring `selected` now would leave `pnpm lint` failing on
+an unused binding until Task 5 uses it.
 
 - [ ] **Step 6: Run the tests to verify they pass**
 
@@ -1253,13 +1253,26 @@ export function ListPane({
 
 - [ ] **Step 4: Wire it into `src/App.tsx`**
 
-Add `focus` state and the derived list, and render the grid:
+Add the remaining state and the derived list, and render the grid. `selected` and
+`selectTab` land here rather than in Task 4 so that every binding is used the moment it
+is declared and `pnpm lint` stays green:
 
 ```tsx
+const [selected, setSelected] = useState('readme')
 const [focus, setFocus] = useState<'list' | 'viewport'>('list')
+
+const selectTab = useCallback((t: TabId) => {
+	setTab(t)
+	setSelected(firstSectionOfTab(t).id)
+}, [])
+
 const visible = visibleSections(tab, filter, filtering)
 const status = listStatus(visible, selected, filter)
 ```
+
+Change `<TabBar tab={tab} onSelect={setTab} />` to `onSelect={selectTab}` so switching a
+tab also selects that tab's first section. Import `useCallback`, and `firstSectionOfTab`
+from `./selectors`.
 
 For now `filter` is `''` and `filtering` is `false` — declare them as state here so Task 8 only has to wire the input:
 

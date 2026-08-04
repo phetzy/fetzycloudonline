@@ -3,10 +3,10 @@ import type { Config } from 'tailwindcss'
 export default {
 	content: ['./index.html', './src/**/*.{ts,tsx}'],
 	theme: {
-		screens: {
-			tui: '700px'
-		},
 		extend: {
+			screens: {
+				tui: '700px'
+			},
 			colors: {
 				crust: '#181926',
 				base: '#24273a',

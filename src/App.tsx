@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState, useSyncExternalStore } from 'react'
 import { DetailPane } from './components/DetailPane'
 import { HeaderRow } from './components/HeaderRow'
 import { ListPane } from './components/ListPane'
@@ -13,12 +13,14 @@ export function App() {
 	const [tab, setTab] = useState<TabId>('readme')
 	const [selected, setSelected] = useState('readme')
 	const [focus, setFocus] = useState<'list' | 'viewport'>('list')
-	const [hydrated, setHydrated] = useState(false)
-	// Deliberate SSR-hydration flag: server and first client render must agree
-	// (both false), so this is the one legitimate case for setState in an
-	// effect with no dependencies.
-	// eslint-disable-next-line react-hooks/set-state-in-effect
-	useEffect(() => setHydrated(true), [])
+	// False during the server render and the hydrating client render, true
+	// afterwards. Both renders must agree or hydration breaks, which is why this
+	// is not plain state set in an effect.
+	const hydrated = useSyncExternalStore(
+		() => () => {},
+		() => true,
+		() => false
+	)
 	// Become state in Task 8, when the filter input lands.
 	const filter = ''
 	const filtering = false

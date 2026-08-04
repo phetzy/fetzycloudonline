@@ -1,12 +1,13 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { App } from './App'
 
 test('renders the title block and metadata', () => {
 	render(<App />)
-	expect(screen.getByText('DAVID FETZER')).toBeInTheDocument()
-	expect(screen.getAllByText('software engineer · boise, id · remote').length).toBeGreaterThan(0)
-	expect(screen.getAllByText(/Software Engineer at C1/).length).toBeGreaterThan(0)
+	const header = within(screen.getByTestId('header-row'))
+	expect(header.getByText('DAVID FETZER')).toBeInTheDocument()
+	expect(header.getByText('software engineer · boise, id · remote')).toBeInTheDocument()
+	expect(header.getByText(/Software Engineer at C1/)).toBeInTheDocument()
 })
 
 test('renders four tabs with readme active', () => {

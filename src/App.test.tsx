@@ -167,7 +167,7 @@ test('the filter searches every tab, not just the active one', async () => {
 	expect(screen.getByRole('button', { name: '› stack' })).toBeInTheDocument()
 })
 
-test('escape cancels the filter and clears it', async () => {
+test('escape cancels the filter and clears it, leaving you where it carried you', async () => {
 	const user = userEvent.setup()
 	render(<App />)
 
@@ -175,8 +175,13 @@ test('escape cancels the filter and clears it', async () => {
 	await user.type(screen.getByLabelText('Filter sections'), 'mapwright')
 	await user.keyboard('{Escape}')
 
+	// Typing "mapwright" from readme crosses into projects and selects mapwright,
+	// since readme drops out of the match list partway through. Escape only clears
+	// filtering/filter — it does not rewind the tab or selection — so afterward the
+	// list is the full, unfiltered projects tab (5 sections) with mapwright first:
+	// 1/5, not 1/1.
 	expect(screen.queryByLabelText('Filter sections')).not.toBeInTheDocument()
-	expect(screen.getByText('1/1')).toBeInTheDocument()
+	expect(screen.getByText('1/5')).toBeInTheDocument()
 })
 
 test('enter keeps the filter and closes the input', async () => {

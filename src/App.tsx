@@ -33,9 +33,6 @@ export function App() {
 	const [filter, setFilter] = useState('')
 	const [filtering, setFiltering] = useState(false)
 	const filterRef = useRef<HTMLInputElement>(null)
-	// The tab/selection in place when the filter opened, so Escape can restore
-	// it — typing may have carried the selection across tabs to reach a match.
-	const preFilterRef = useRef<{ tab: TabId; selected: string } | null>(null)
 
 	const selectTab = useCallback((t: TabId) => {
 		setTab(t)
@@ -76,21 +73,9 @@ export function App() {
 	)
 
 	const startFilter = useCallback(() => {
-		preFilterRef.current = { tab, selected }
 		setFiltering(true)
 		// The input mounts in this same commit; focus once it exists.
 		queueMicrotask(() => filterRef.current?.focus())
-	}, [tab, selected])
-
-	const cancelFilter = useCallback(() => {
-		setFiltering(false)
-		setFilter('')
-		const prev = preFilterRef.current
-		if (prev) {
-			setTab(prev.tab)
-			setSelected(prev.selected)
-		}
-		preFilterRef.current = null
 	}, [])
 
 	const onFilterChange = useCallback(
@@ -105,19 +90,16 @@ export function App() {
 		[tab, selected]
 	)
 
-	const onFilterKeyDown = useCallback(
-		(event: KeyboardEvent<HTMLInputElement>) => {
-			if (event.key === 'Escape') {
-				event.preventDefault()
-				cancelFilter()
-			} else if (event.key === 'Enter') {
-				event.preventDefault()
-				setFiltering(false)
-				preFilterRef.current = null
-			}
-		},
-		[cancelFilter]
-	)
+	const onFilterKeyDown = useCallback((event: KeyboardEvent<HTMLInputElement>) => {
+		if (event.key === 'Escape') {
+			event.preventDefault()
+			setFiltering(false)
+			setFilter('')
+		} else if (event.key === 'Enter') {
+			event.preventDefault()
+			setFiltering(false)
+		}
+	}, [])
 
 	useEffect(() => {
 		const onKey = (event: globalThis.KeyboardEvent) => {
@@ -136,7 +118,8 @@ export function App() {
 					break
 				case 'Escape':
 					event.preventDefault()
-					cancelFilter()
+					setFiltering(false)
+					setFilter('')
 					break
 				case 'j':
 				case 'ArrowDown':
@@ -195,7 +178,7 @@ export function App() {
 
 		window.addEventListener('keydown', onKey)
 		return () => window.removeEventListener('keydown', onKey)
-	}, [focus, move, scrollViewport, cycleTab, current, startFilter, cancelFilter])
+	}, [focus, move, scrollViewport, cycleTab, current, startFilter])
 
 	return (
 		<div className="h-screen overflow-hidden bg-crust p-[clamp(8px,2.4vw,32px)] font-mono text-text">

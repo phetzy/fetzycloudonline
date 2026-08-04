@@ -40,12 +40,22 @@ func TestViewAtWideTerminal(t *testing.T) {
 }
 
 func TestViewNeverExceedsTheTerminalWidth(t *testing.T) {
-	for _, w := range []int{80, 100, 140} {
+	for _, w := range []int{60, 80, 100, 140} {
 		m := New(site.MustLoad(), os.Stdout).SetSize(w, 24)
 		for i, line := range splitLines(m.View()) {
 			if width := visibleWidth(line); width > w {
 				t.Errorf("at %d columns, line %d is %d wide: %q", w, i, width, line)
 			}
+		}
+	}
+}
+
+func TestViewNeverExceedsTheTerminalHeight(t *testing.T) {
+	for _, size := range []struct{ w, h int }{{80, 24}, {100, 30}, {140, 40}} {
+		m := New(site.MustLoad(), os.Stdout).SetSize(size.w, size.h)
+		if got := len(splitLines(m.View())); got > size.h {
+			t.Errorf("at %dx%d the frame is %d lines, which overflows the terminal",
+				size.w, size.h, got)
 		}
 	}
 }

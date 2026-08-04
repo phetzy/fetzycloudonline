@@ -4,32 +4,61 @@ export default {
 	content: ['./index.html', './src/**/*.{ts,tsx}'],
 	theme: {
 		extend: {
+			screens: {
+				tui: '700px'
+			},
 			colors: {
-				ground: '#0D0D0E',
-				ph: 'var(--ph)',
-				bright: '#F2EEE4',
-				body: '#D5D0C4',
-				muted: '#A9A498',
-				faint: '#8E8A80',
-				dim: '#949086',
-				chrome: '#7E7A70',
-				sky: '#8FB8DE',
-				rule: '#2A2A28',
-				'rule-faint': '#1E1E1C',
-				surface: '#17171A',
-				panel: '#101012'
+				crust: '#181926',
+				base: '#24273a',
+				mantle: '#1e2030',
+				surface0: '#363a4f',
+				surface1: '#494d64',
+				rule: '#2f3348',
+				text: '#cad3f5',
+				subtext1: '#b8c0e0',
+				subtext0: '#a5adcb',
+				lavender: '#b7bdf8',
+				mauve: '#c6a0f6',
+				green: '#a6da95',
+				red: '#ed8796',
+				yellow: '#eed49f',
+				acc: 'var(--acc, #f5a97f)',
+				acc2: 'var(--acc2, #8aadf4)'
 			},
 			fontFamily: {
-				mono: ['"IBM Plex Mono"', 'monospace']
+				mono: [
+					'CaskaydiaCove NF',
+					'Cascadia Code',
+					'Symbols Nerd Font',
+					'ui-monospace',
+					'monospace'
+				]
 			},
 			keyframes: {
-				blink: {
-					'0%, 49%': { opacity: '1' },
-					'50%, 100%': { opacity: '0' }
+				blink: { '0%, 49%': { opacity: '1' }, '50%, 100%': { opacity: '0' } },
+				slidedown: {
+					from: { opacity: '0', transform: 'translateY(10px)' },
+					to: { opacity: '1', transform: 'none' }
+				},
+				slideup: {
+					from: { opacity: '0', transform: 'translateY(-10px)' },
+					to: { opacity: '1', transform: 'none' }
+				},
+				slidex: {
+					from: { opacity: '0', transform: 'translateX(-10px)' },
+					to: { opacity: '1', transform: 'none' }
+				},
+				risein: {
+					from: { opacity: '0', transform: 'translateY(6px)' },
+					to: { opacity: '1', transform: 'none' }
 				}
 			},
 			animation: {
-				blink: 'blink 1.1s step-end infinite'
+				blink: 'blink 1.1s step-end infinite',
+				slidedown: 'slidedown 170ms cubic-bezier(0.22, 1, 0.36, 1)',
+				slideup: 'slideup 170ms cubic-bezier(0.22, 1, 0.36, 1)',
+				slidex: 'slidex 190ms cubic-bezier(0.22, 1, 0.36, 1) both',
+				risein: 'risein 320ms cubic-bezier(0.22, 1, 0.36, 1)'
 			}
 		}
 	},

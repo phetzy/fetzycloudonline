@@ -1,7 +1,17 @@
 # fetzycloudonline
 
-David Fetzer's personal site — a single static page styled as a Unix man page
-rendered in a terminal pager.
+David Fetzer's personal site, rendered as a Bubble Tea–style terminal program
+running inside a terminal window (Catppuccin Macchiato palette). Tabs, a
+list/detail pane layout, and keyboard navigation stand in for a normal web
+page.
+
+A Go SSH front end that serves the same content over `ssh` is planned as a
+separate sub-project. It has not been built yet.
+
+**`content.json` is the shared content source.** This React front end reads
+it (via `src/content.ts`), and the future SSH app will read the same file.
+Content is frozen: do not add projects, metrics, or details that aren't
+already in `content.json`.
 
 ## Development
 
@@ -12,26 +22,37 @@ pnpm dev
 
 ## Commands
 
-| Command        | Description                                         |
-| -------------- | --------------------------------------------------- |
-| `pnpm dev`     | Vite dev server                                     |
-| `pnpm build`   | Type-check, bundle, and prerender to `dist/`        |
-| `pnpm preview` | Serve the production build                          |
-| `pnpm test`    | Vitest unit tests, then Playwright end-to-end tests |
-| `pnpm lint`    | Prettier check and ESLint                           |
-| `pnpm format`  | Rewrite files with Prettier                         |
+| Command                 | Description                                         |
+| ----------------------- | --------------------------------------------------- |
+| `pnpm dev`              | Vite dev server                                     |
+| `pnpm build`            | Type-check, bundle, and prerender to `dist/`        |
+| `pnpm preview`          | Serve the production build                          |
+| `pnpm test`             | Vitest unit tests, then Playwright end-to-end tests |
+| `pnpm test:unit`        | Vitest unit tests only                              |
+| `pnpm test:integration` | Playwright end-to-end tests only                    |
+| `pnpm lint`             | Prettier check and ESLint                           |
+| `pnpm format`           | Rewrite files with Prettier                         |
 
 ## Structure
 
-- `src/Manual.tsx` — the page: eleven sections and the keyboard wiring
-- `src/content.ts` — content for the repeating rows
-- `src/hooks/` — scroll percentage, section navigation, search
-- `src/components/` — section, row, status bar, overlay, and button primitives
+- `content.json` — shared content source (tabs, sections, rows, links)
+- `src/App.tsx` — the program: tab switching, keyboard wiring, pane state
+- `src/content.ts` — typed accessors over `content.json`
+- `src/selectors.ts` — derived view state
+- `src/hooks/` — terminal dimensions, reduced-motion detection
+- `src/components/` — title bar, tab bar, list pane, detail pane, header row,
+  help footer, prompt, and minimized-window note
+- `prerender.ts` — injects prerendered markup into `dist/index.html` at build
+  time
+- `tests/` — Playwright end-to-end specs
 
-The design comes from an external design handoff that is not checked into this
-repo. Content is fixed: do not add projects, metrics, or details that are not
-in that reference.
+The design comes from an external design handoff at
+`~/Downloads/tuiSite/design_handoff_tui_ssh/`, which is not checked into this
+repo.
 
 ## Deployment
 
-Vercel, static build. No environment variables.
+Vercel, static build. No environment variables. `vercel.json` pins
+`framework: null` and `outputDirectory: dist` — the Vercel project was
+originally created in 2024 for a SvelteKit app, and its stale framework
+preset would otherwise try to serve that instead of this static build.

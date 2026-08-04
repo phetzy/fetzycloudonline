@@ -1,0 +1,229 @@
+{
+	"tabs": [
+		{ "id": "readme", "label": "readme" },
+		{ "id": "projects", "label": "projects" },
+		{ "id": "work", "label": "work" },
+		{ "id": "contact", "label": "contact" }
+	],
+	"sections": [
+		{
+			"id": "readme",
+			"tab": "readme",
+			"label": "README.md",
+			"path": "~/site/README.md",
+			"meta": "overview",
+			"title": "David Fetzer",
+			"kicker": "software engineer · boise, id · remote",
+			"paras": [
+				"I build infrastructure — map servers, command-line tools, self-hosted platforms, and the hardware underneath them.",
+				"Four independent projects carry this page: a self-hosted map server sold as a Mapbox alternative, a static Go binary for browserless file transfer, a private LLM and RAG platform on Kubernetes, and a secure element board for the Raspberry Pi."
+			],
+			"rows": [
+				{ "label": "location", "body": "Boise, ID · remote" },
+				{ "label": "role", "body": "Software Engineer at C1, March 2022 – present" },
+				{ "label": "status", "body": "Open to interesting conversations" }
+			],
+			"links": []
+		},
+		{
+			"id": "mapwright",
+			"tab": "projects",
+			"label": "mapwright",
+			"path": "~/site/projects/mapwright",
+			"meta": "flagship",
+			"title": "mapwright",
+			"kicker": "self-hosted map infrastructure · mapwright.io",
+			"paras": [
+				"A self-hosted map server. The full Mapbox stack — tiles, styles, geocoding, routing, static maps — running on your own hardware as a single Docker image with embedded Postgres.",
+				"Mapwright speaks Mapbox and MapTiler URL shapes, so existing MapLibre applications migrate by changing a base URL rather than rewriting against a new SDK. It runs air-gapped for on-premise and data-residency requirements."
+			],
+			"rows": [
+				{
+					"label": "01 tiles",
+					"body": "Vector and raster tiles. 127 GB for full-planet coverage."
+				},
+				{ "label": "02 styles", "body": "Visual style editor with five standard styles." },
+				{ "label": "03 geocoding", "body": "Forward and reverse geocoding with POI search." },
+				{
+					"label": "04 routing",
+					"body": "Directions, matrix, isochrone, map-matching, optimization. 93 GB, full planet."
+				},
+				{ "label": "05 static maps", "body": "Server-rendered static maps." },
+				{ "label": "06 wmts/wms", "body": "WMTS and WMS for standards-based GIS clients." },
+				{ "label": "07 api keys", "body": "Scopes, origin allowlists, metering, and rate limits." },
+				{ "label": "08 admin", "body": "Admin console." }
+			],
+			"links": [
+				{ "label": "mapwright.io", "href": "https://mapwright.io" },
+				{ "label": "docs", "href": "https://mapwright.io/docs" }
+			]
+		},
+		{
+			"id": "transfer",
+			"tab": "projects",
+			"label": "transfer-it-cli",
+			"path": "~/site/projects/transfer-it-cli",
+			"meta": "go · TUI + CLI",
+			"title": "transfer-it-cli",
+			"kicker": "single static go binary · MIT",
+			"paras": [
+				"A single static Go binary for MEGA's transfer.it, shipping as both an interactive TUI and a scriptable CLI. Built for machines without a browser — servers, embedded boxes, SSH-only sessions. Zero runtime dependencies."
+			],
+			"rows": [
+				{
+					"label": "protocol",
+					"body": "The upload path is reverse-engineered from transfer.it's WebSocket protocol."
+				},
+				{
+					"label": "throughput",
+					"body": "Multi-pool parallel connections, in-session retry with exponential backoff, and token-bucket bandwidth limiting over a shared HTTP/2 client with TLS session resumption."
+				},
+				{
+					"label": "memory",
+					"body": "Transfers stream, so memory stays bounded by the chunk size — under a megabyte, even on 20+ GiB files."
+				},
+				{
+					"label": "resume",
+					"body": "Uploads, downloads, and recursive folder uploads all resume after process restart, tracked by a per-transfer chunk bitmap with per-chunk MAC verification that stays forward-compatible across binary upgrades."
+				},
+				{
+					"label": "packaging",
+					"body": "Six cross-compiled targets plus native .deb, .rpm, and .apk packages."
+				},
+				{
+					"label": "ci",
+					"body": "staticcheck, govulncheck, and race-detector tests across Linux, macOS, and Windows, alongside a weekly check that hashes upstream bundles and opens an issue when the service changes underneath it."
+				}
+			],
+			"links": []
+		},
+		{
+			"id": "platform",
+			"tab": "projects",
+			"label": "ai-platform",
+			"path": "~/site/projects/ai-platform",
+			"meta": "k3s · rag",
+			"title": "self-hosted ai platform",
+			"kicker": "private LLM and RAG stack on kubernetes",
+			"paras": [
+				"A multi-node K3s cluster running across Raspberry Pis, with GPU inference offloaded to a virtualized host elsewhere on the same network. Open WebUI, Ollama, a FastAPI retrieval service over a Qdrant vector store, Prometheus and Grafana observability, and automated backup-freshness checks."
+			],
+			"rows": [
+				{
+					"label": "ops agent",
+					"body": "A read-only operations agent answers infrastructure questions from runbooks and live cluster state."
+				},
+				{
+					"label": "safety",
+					"body": "Every request passes a default-deny safety router: an LLM intent classifier and a regex gate run independently, and either one flagging write intent stops execution before it starts. Writes come back as a scoped review checklist — the agent proposes, a human approves."
+				},
+				{
+					"label": "architecture",
+					"body": "Mixed-architecture throughout. Cluster workloads are arm64 images built and served from a private registry with upstream images pinned by digest, while inference runs on x86 with a passed-through consumer AMD GPU."
+				},
+				{
+					"label": "inference",
+					"body": "Vulkan rules out flash attention and KV-cache quantization, so throughput comes from context and keep-alive tuning instead."
+				},
+				{
+					"label": "services",
+					"body": "Python and FastAPI services, a Go backend-for-frontend, React and TypeScript console."
+				}
+			],
+			"links": []
+		},
+		{
+			"id": "hat",
+			"tab": "projects",
+			"label": "secure-element-hat",
+			"path": "~/site/projects/secure-element-hat",
+			"meta": "kicad · pcb",
+			"title": "secure element HAT",
+			"kicker": "raspberry pi add-on board",
+			"paras": ["A custom PCB designed in KiCad around an ATECC608B-TNGTLS secure element."],
+			"rows": [
+				{ "label": "interface", "body": "I2C." },
+				{ "label": "keys", "body": "Hardware-backed key storage and TLS provisioning." },
+				{
+					"label": "integration",
+					"body": "Device tree overlay and EEPROM configuration for Raspberry Pi."
+				}
+			],
+			"links": []
+		},
+		{
+			"id": "oss",
+			"tab": "projects",
+			"label": "open-source",
+			"path": "~/site/projects/open-source",
+			"meta": "contributions",
+			"title": "open source",
+			"kicker": "contributions",
+			"paras": ["Contributions to Jellyfin and Websurfx."],
+			"rows": [],
+			"links": []
+		},
+		{
+			"id": "c1",
+			"tab": "work",
+			"label": "c1",
+			"path": "~/site/work/c1",
+			"meta": "mar 2022 – present",
+			"title": "C1 — Software Engineer",
+			"kicker": "march 2022 – present · remote",
+			"paras": [
+				"Distributed systems and embedded software. Backend services in Go and TypeScript, React frontends, and AWS infrastructure managed as code with Terraform. Also builds internal tooling used across engineering teams."
+			],
+			"rows": [{ "label": "prior", "body": "US Army infantry veteran, 2012–2015." }],
+			"links": []
+		},
+		{
+			"id": "stack",
+			"tab": "work",
+			"label": "stack",
+			"path": "~/site/work/stack",
+			"meta": "index",
+			"title": "stack",
+			"kicker": "languages, services, and tools",
+			"paras": [],
+			"rows": [
+				{ "label": "languages", "body": "Go, TypeScript, JavaScript, Python" },
+				{
+					"label": "backend",
+					"body": "Node.js, Express, PostgreSQL, PostGIS, REST APIs, WebSockets"
+				},
+				{ "label": "frontend", "body": "React, Tailwind" },
+				{
+					"label": "infrastructure",
+					"body": "AWS, Terraform, OpenTofu, Docker, Kubernetes, Linux"
+				},
+				{ "label": "hardware", "body": "KiCad, embedded Linux, I2C" },
+				{
+					"label": "domains",
+					"body": "geospatial, embedded systems, self-hosted infrastructure"
+				}
+			],
+			"links": []
+		},
+		{
+			"id": "contact",
+			"tab": "contact",
+			"label": "contact",
+			"path": "~/site/contact",
+			"meta": "3 entries",
+			"title": "contact",
+			"kicker": "no phone, no form",
+			"paras": [],
+			"rows": [
+				{ "label": "email", "body": "david.j.fetzer@gmail.com" },
+				{ "label": "github", "body": "github.com/phetzy" },
+				{ "label": "linkedin", "body": "linkedin.com/in/fetzy" }
+			],
+			"links": [
+				{ "label": "david.j.fetzer@gmail.com", "href": "mailto:david.j.fetzer@gmail.com" },
+				{ "label": "github.com/phetzy", "href": "https://github.com/phetzy" },
+				{ "label": "linkedin.com/in/fetzy", "href": "https://linkedin.com/in/fetzy" }
+			]
+		}
+	]
+}

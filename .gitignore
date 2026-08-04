@@ -24,3 +24,6 @@ vite.config.ts.timestamp-*
 # Go
 /fetzer
 /dist-ssh/
+
+# SSH host key (generated locally, never committed)
+/.ssh/

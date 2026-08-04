@@ -33,6 +33,7 @@ import (
 	"github.com/charmbracelet/wish/activeterm"
 	wishbubbletea "github.com/charmbracelet/wish/bubbletea"
 	wishrecover "github.com/charmbracelet/wish/recover"
+	gossh "golang.org/x/crypto/ssh"
 
 	site "github.com/phetzy/fetzycloudonline"
 	"github.com/phetzy/fetzycloudonline/internal/ratelimit"
@@ -74,6 +75,11 @@ func main() {
 		// not SSH session channels, and neither charmbracelet/ssh nor
 		// x/crypto/ssh cap the latter on their own).
 		withSessionRequestCallback(sessionRequestCallback(logger)),
+		// Caps how many "session" channels (not just granted session
+		// channels — see sessionChannelCounterContextKey's doc comment) a
+		// single TCP connection can open, closing the channel itself
+		// rather than merely refusing what happens inside it.
+		withSessionChannelLimit(logger),
 		// Wish composes middleware so that the LAST one listed here runs
 		// FIRST (each wraps the next; last-in is outermost). The list below
 		// is [recover-wrapped(bubbletea, activeterm), logging], which puts:
@@ -281,6 +287,85 @@ func withSessionRequestCallback(cb ssh.SessionRequestCallback) ssh.Option {
 	}
 }
 
+// sessionChannelCounterContextKey is the ssh.Context key under which each
+// connection's session-channel open counter is stored. Installed once per
+// connection in rateLimitConnCallback, alongside the sessionGate, and read
+// by every "session" channel handler wrapped with limitSessionChannels on
+// that connection.
+type sessionChannelCounterContextKey struct{}
+
+// maxSessionChannelsPerConn caps how many "session" channels a single TCP
+// connection may open.
+//
+// sessionRequestCallback (above) only gates what happens *inside* an
+// already-open channel — a "shell", "exec", or "subsystem" request.
+// charmbracelet/ssh's DefaultSessionHandler accepts the raw channel itself
+// (newChan.Accept(), one goroutine, one unbounded env slice) before any of
+// that gate is ever consulted. Without a separate cap here, a single
+// connection inside the per-IP concurrency budget could open session
+// channels without limit: unbounded goroutine and memory growth, and log
+// amplification too, since every request rejected inside a channel logs a
+// Warn. Four is generous headroom for a single-screen TUI, which only ever
+// opens one.
+const maxSessionChannelsPerConn = 4
+
+// limitSessionChannels wraps a ChannelHandler (ssh.DefaultSessionHandler in
+// practice) so that "session" channel opens past
+// maxSessionChannelsPerConn on one connection are rejected outright — the
+// channel itself is never accepted, so no goroutine, session, or env slice
+// is ever created for it. The rejection is logged once per connection, on
+// the first channel open that crosses the limit, rather than once per
+// request, so a client that keeps trying cannot amplify the log path either.
+func limitSessionChannels(logger *slog.Logger, next ssh.ChannelHandler) ssh.ChannelHandler {
+	return func(srv *ssh.Server, conn *gossh.ServerConn, newChan gossh.NewChannel, ctx ssh.Context) {
+		counter, ok := ctx.Value(sessionChannelCounterContextKey{}).(*atomic.Int32)
+		if !ok {
+			// Unreachable in normal operation, mirroring the analogous
+			// fallback in sessionRequestCallback: rateLimitConnCallback
+			// always installs the counter before any channel on the
+			// connection can be requested. Fail closed rather than
+			// silently allowing unlimited channels if that invariant is
+			// ever broken.
+			_ = newChan.Reject(gossh.ResourceShortage, "no channel counter on connection context")
+			return
+		}
+
+		if n := counter.Add(1); n > maxSessionChannelsPerConn {
+			if n == maxSessionChannelsPerConn+1 {
+				logger.Warn("session channel rejected",
+					"remote_addr", conn.RemoteAddr().String(),
+					"reason", "connection exceeded per-connection session channel limit",
+					"limit", maxSessionChannelsPerConn,
+				)
+			}
+			_ = newChan.Reject(gossh.ResourceShortage, "too many session channels on this connection")
+			return
+		}
+
+		next(srv, conn, newChan, ctx)
+	}
+}
+
+// withSessionChannelLimit is an ssh.Option installing limitSessionChannels
+// around whatever "session" channel handler the server would otherwise use
+// (ssh.DefaultSessionHandler, since nothing else in this program overrides
+// it). It must run after any option that might set ChannelHandlers itself,
+// though nothing here does; it is defensive against that changing later.
+func withSessionChannelLimit(logger *slog.Logger) ssh.Option {
+	return func(s *ssh.Server) error {
+		handlers := make(map[string]ssh.ChannelHandler, len(ssh.DefaultChannelHandlers)+len(s.ChannelHandlers))
+		for k, v := range ssh.DefaultChannelHandlers {
+			handlers[k] = v
+		}
+		for k, v := range s.ChannelHandlers {
+			handlers[k] = v
+		}
+		handlers["session"] = limitSessionChannels(logger, handlers["session"])
+		s.ChannelHandlers = handlers
+		return nil
+	}
+}
+
 // rateLimitConnCallback wraps every accepted net.Conn, before the SSH
 // handshake begins, with the per-IP concurrency and rate limiter. A
 // rejected connection is closed immediately with a logged reason and never
@@ -290,12 +375,15 @@ func withSessionRequestCallback(cb ssh.SessionRequestCallback) ssh.Option {
 // limiter's release is idempotent, so double-release from overlapping
 // close paths is safe.
 //
-// It also installs a fresh *sessionGate on the connection's ssh.Context,
-// which sessionRequestCallback uses to cap the connection to a single
-// granted session channel. This is the only point in the code that runs
+// It also installs a fresh *sessionGate and a fresh session-channel counter
+// (*atomic.Int32, under sessionChannelCounterContextKey) on the connection's
+// ssh.Context: the gate is what sessionRequestCallback uses to cap the
+// connection to a single granted session channel, and the counter is what
+// limitSessionChannels uses to cap how many session channels the connection
+// can open in the first place. This is the only point in the code that runs
 // exactly once per TCP connection with access to that connection's
-// ssh.Context, before any channel on it can be requested — installing the
-// gate anywhere else would race multiple concurrent channel requests
+// ssh.Context, before any channel on it can be requested — installing
+// either one anywhere else would race multiple concurrent channel requests
 // against each other to initialize it.
 func rateLimitConnCallback(logger *slog.Logger, limiter *ratelimit.Limiter) ssh.ConnCallback {
 	return func(ctx ssh.Context, conn net.Conn) net.Conn {
@@ -312,6 +400,7 @@ func rateLimitConnCallback(logger *slog.Logger, limiter *ratelimit.Limiter) ssh.
 		}
 
 		ctx.SetValue(sessionGateContextKey{}, &sessionGate{})
+		ctx.SetValue(sessionChannelCounterContextKey{}, &atomic.Int32{})
 
 		return &releasingConn{Conn: conn, release: release}
 	}

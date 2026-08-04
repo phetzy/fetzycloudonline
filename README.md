@@ -122,7 +122,7 @@ zero or negative.
 | `tab` / `shift+tab` | Next / previous tab         |
 | `/`                 | Filter                       |
 | `enter`             | Show link (reveals via OSC 52) |
-| `esc`               | Cancel filter                |
+| `esc`               | Clear the filter — while the filter input is open, or afterward if a stale query is still narrowing (or emptying) the list |
 | `q`, `ctrl+c`       | Quit                         |
 
 (There's also an undocumented easter egg bound to `C` — deliberately absent
@@ -144,6 +144,13 @@ authorized user, by design. What keeps that safe:
   granted session channel, since neither the connection limiter nor the
   underlying SSH libraries cap session channels per connection on their
   own.
+- **A per-connection session-channel-open cap** (4) rejects a "session"
+  channel outright — before it is ever accepted, so no goroutine or `env`
+  slice is created for it — once a connection has opened that many. This
+  closes the gap one level below the session gate above:
+  `DefaultSessionHandler` accepts the raw channel before the gate is ever
+  consulted, so without this cap a connection inside the per-IP budget
+  could otherwise open session channels without limit.
 - **Idle and max-session timeouts** (`-idle-timeout`, `-max-session`) bound
   how long any one session can stay open, active or not.
 - **A persisted host key**, generated once and reused, so the server's
@@ -158,15 +165,23 @@ authorized user, by design. What keeps that safe:
 
 ### Known residual risks
 
-- The per-connection session cap is enforced at the shell/exec/subsystem
-  request stage, not at the raw SSH channel level — a connection could
-  still open other channel types before that gate applies.
 - Panic recovery covers the Bubble Tea program and the wish middleware
   bodies, but not panics inside the underlying SSH library's own
   goroutines (outside that recovered path).
-- Rejection logging (for connection and session-channel rejections) is
-  attacker-triggerable at line rate — a client that keeps getting rejected
-  can keep generating log lines at whatever rate it reconnects.
+- Rejection logging is bounded per event, but not per connection. A new
+  TCP connection that fails the per-IP concurrency or rate limit logs one
+  "connection rejected" line (`rateLimitConnCallback`); a "session"
+  channel opened past the per-connection cap logs one "session channel
+  rejected" line (`limitSessionChannels`, at most once per connection, not
+  once per attempt). Both are still attacker-triggerable at whatever rate
+  the client can generate the underlying event — a new TCP connection each
+  time, in the first case. The one path still unbounded even per
+  connection: once a "session" channel is accepted (up to
+  `maxSessionChannelsPerConn` of them) but the connection's session gate
+  has already granted a different channel, every subsequent request on
+  that channel — "shell", "pty-req", "env", and so on — re-triggers
+  `sessionRequestCallback` and logs its own "session rejected" line, at
+  whatever rate the client sends requests within that one channel.
 
 ### Deployment is not built
 

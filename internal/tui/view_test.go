@@ -4,6 +4,7 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	site "github.com/phetzy/fetzycloudonline"
@@ -48,6 +49,38 @@ func TestViewNeverExceedsTheTerminalWidth(t *testing.T) {
 			}
 		}
 	}
+}
+
+// TestListPaneScrollsSelectionIntoView reproduces the narrow-terminal trap:
+// below wideThreshold the stacked layout gives the list pane only a few
+// rows, so hard-truncating at the pane height (rather than scrolling) can
+// leave the current selection — and its "›" marker — entirely off-screen
+// with no on-screen sign anything changed. At 60x24, the list pane has far
+// fewer than 5 rows, so selecting the last of projects' 5 sections requires
+// the window to have scrolled.
+func TestListPaneScrollsSelectionIntoView(t *testing.T) {
+	m := press(t, New(site.MustLoad(), os.Stdout).SetSize(60, 24), "tab") // projects
+	m = press(t, m, "j", "j", "j", "j")                                   // mapwright -> open-source (id "oss")
+	if m.Selected() != "oss" {
+		t.Fatalf("selected = %q, want oss (open-source)", m.Selected())
+	}
+
+	view := m.View()
+	if !containsLine(view, "open-source") {
+		t.Errorf("selected row %q not present in the rendered frame:\n%s", "open-source", view)
+	}
+	if !containsLine(view, "›") {
+		t.Errorf("selection marker not present in the rendered frame:\n%s", view)
+	}
+}
+
+func containsLine(view, needle string) bool {
+	for _, line := range splitLines(view) {
+		if strings.Contains(line, needle) {
+			return true
+		}
+	}
+	return false
 }
 
 func TestViewNeverExceedsTheTerminalHeight(t *testing.T) {

@@ -200,9 +200,34 @@ func (m Model) renderFooter(width int) string {
 	return m.renderHelp()
 }
 
+// scrollWindow returns the index of the first row to show in a list of
+// length total, height rows tall, so that idx stays visible — the same
+// keep-selection-in-view intent as the web build's ListPane effect (which
+// nudges box.scrollTop just far enough to bring the selected button back
+// into its viewport). Recomputed from scratch on every render rather than
+// carried as persisted scroll state, so it centers idx in the window
+// whenever there's room, and otherwise clamps to the start or end of the
+// list — idx is always within [start, start+height) for any height > 0 and
+// total > 0.
+func scrollWindow(idx, total, height int) int {
+	if height <= 0 || total <= height {
+		return 0
+	}
+	start := idx - height/2
+	if start < 0 {
+		start = 0
+	}
+	if maxStart := total - height; start > maxStart {
+		start = maxStart
+	}
+	return start
+}
+
 // renderListPane renders the section list: one line per visible section,
-// marking the current selection. Rows beyond the pane's height are dropped
-// rather than left to overflow the frame — Task 5 adds scrolling.
+// marking the current selection, scrolled so the selection is always in the
+// visible window, plus one status line (ListStatus) pinned to the bottom of
+// the pane — mirroring the web build's ListPane, which keeps the selected
+// button in its scroll viewport and shows the same status line beneath it.
 func (m Model) renderListPane(outerW, outerH int, focused bool) string {
 	style := m.styles.PaneUnfocused
 	if focused {
@@ -213,8 +238,27 @@ func (m Model) renderListPane(outerW, outerH int, focused bool) string {
 	textW := paneTextWidth(outerW)
 
 	sections := m.visibleSections()
-	lines := make([]string, 0, len(sections))
-	for _, s := range sections {
+
+	rowsH := styleH - 1 // one row reserved for the status line below
+	if rowsH < 0 {
+		rowsH = 0
+	}
+
+	idx := 0
+	for i, s := range sections {
+		if s.ID == m.selected {
+			idx = i
+			break
+		}
+	}
+	start := scrollWindow(idx, len(sections), rowsH)
+	end := start + rowsH
+	if end > len(sections) {
+		end = len(sections)
+	}
+
+	lines := make([]string, 0, end-start+1)
+	for _, s := range sections[start:end] {
 		marker := "  "
 		if s.ID == m.selected {
 			marker = "› "
@@ -227,6 +271,8 @@ func (m Model) renderListPane(outerW, outerH int, focused bool) string {
 		}
 		lines = append(lines, line)
 	}
+	lines = append(lines, truncateToWidth(m.styles.Help.Render(m.Status()), textW))
+
 	if len(lines) > styleH && styleH >= 0 {
 		lines = lines[:styleH]
 	}

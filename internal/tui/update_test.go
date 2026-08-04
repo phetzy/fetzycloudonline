@@ -22,6 +22,11 @@ func press(t *testing.T, m Model, keys ...string) Model {
 			msg = tea.KeyMsg{Type: tea.KeyEnter}
 		case "esc":
 			msg = tea.KeyMsg{Type: tea.KeyEsc}
+		case " ":
+			// A lone space arrives from bubbletea as its own KeyType, not
+			// KeyRunes — see key.go's detectOneMsg — so it must be modeled
+			// that way here too, not folded into the default KeyRunes case.
+			msg = tea.KeyMsg{Type: tea.KeySpace, Runes: []rune(" ")}
 		default:
 			msg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(k)}
 		}

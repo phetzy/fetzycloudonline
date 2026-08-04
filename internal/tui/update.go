@@ -60,6 +60,16 @@ func (m Model) handleKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 	case key.Matches(msg, m.keys.Filter):
 		m.filtering = true
 		return m, nil
+	case key.Matches(msg, m.keys.Cancel):
+		// Reachable here whenever the filter input is closed but a stale
+		// query is still narrowing (or emptying) the list — e.g. after
+		// enter closed the input on a no-match query. handleFilterKey
+		// covers esc while the input is open; this covers esc afterward,
+		// matching the web build's global Escape handler, which clears the
+		// filter unconditionally rather than only while its own input has
+		// focus.
+		m.filter = ""
+		return m, nil
 	case key.Matches(msg, m.keys.NextTab):
 		return m.switchTab(1), nil
 	case key.Matches(msg, m.keys.PrevTab):
@@ -106,7 +116,13 @@ func (m Model) handleFilterKey(msg tea.KeyMsg) Model {
 			m.filter = string(r[:len(r)-1])
 		}
 		return m.reselectAfterFilterChange()
-	case msg.Type == tea.KeyRunes:
+	case msg.Type == tea.KeyRunes, msg.Type == tea.KeySpace:
+		// tea.KeySpace is a distinct Type from KeyRunes for a lone space (see
+		// bubbletea's key.go): a run of runes is reported as KeyRunes, but a
+		// run of exactly one rune that is a space is reported as KeySpace
+		// instead, with Runes still populated. Without this case, a space
+		// typed into the filter (as opposed to pasted as part of a longer
+		// run, which stays KeyRunes) is silently swallowed.
 		m.filter += string(msg.Runes)
 		return m.reselectAfterFilterChange()
 	}

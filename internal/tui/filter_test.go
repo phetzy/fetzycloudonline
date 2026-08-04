@@ -17,6 +17,40 @@ func TestFilterOpensAndNarrows(t *testing.T) {
 	}
 }
 
+// TestFilterAcceptsASpace guards against bubbletea reporting a lone space
+// as tea.KeySpace rather than tea.KeyRunes: handleFilterKey must treat it
+// the same as any other printable rune, or the space is silently dropped
+// while everything typed around it lands.
+func TestFilterAcceptsASpace(t *testing.T) {
+	m := press(t, newTestModel(t), "/", "m", " ", "s")
+	if got := m.Filter(); got != "m s" {
+		t.Errorf("filter = %q, want %q — a typed space must not be swallowed", got, "m s")
+	}
+}
+
+// TestEscapeAfterANoMatchFilterRecovers reproduces the trap: open the
+// filter, type a query that matches nothing, press enter (closing the
+// input but keeping the stale, empty-rendering filter), then esc — which
+// must clear it and restore the list, since esc has no other way to reach
+// the filter once the input itself is closed.
+func TestEscapeAfterANoMatchFilterRecovers(t *testing.T) {
+	m := press(t, newTestModel(t), "/", "z", "z", "z", "z", "enter")
+	if m.Filtering() {
+		t.Fatal("filter input should be closed after enter")
+	}
+	if got := m.Status(); got != "no match" {
+		t.Fatalf("precondition: status = %q, want %q", got, "no match")
+	}
+
+	m = press(t, m, "esc")
+	if m.Filter() != "" {
+		t.Errorf("filter = %q, want cleared after esc", m.Filter())
+	}
+	if got := m.Status(); got == "no match" {
+		t.Error("esc did not recover from the no-match filter")
+	}
+}
+
 func TestFilterSearchesEveryTabWhileOpen(t *testing.T) {
 	m := newTestModel(t) // starts on readme
 	m = press(t, m, "/", "s", "t", "a", "c", "k")

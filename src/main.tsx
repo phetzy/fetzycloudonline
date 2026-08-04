@@ -2,7 +2,7 @@ import { StrictMode } from 'react'
 import { hydrateRoot } from 'react-dom/client'
 import { Analytics } from '@vercel/analytics/react'
 import './index.css'
-import { Manual } from './Manual'
+import { App } from './App'
 
 const root = document.getElementById('root')
 if (!root) throw new Error('#root not found')
@@ -10,7 +10,7 @@ if (!root) throw new Error('#root not found')
 hydrateRoot(
 	root,
 	<StrictMode>
-		<Manual />
+		<App />
 		<Analytics />
 	</StrictMode>
 )

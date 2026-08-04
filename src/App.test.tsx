@@ -137,6 +137,20 @@ test('tab cycles tabs forward and shift+tab backward', async () => {
 	expect(screen.getByRole('tab', { name: '▌ readme' })).toBeInTheDocument()
 })
 
+test('tab does not cycle tabs while the viewport is focused', async () => {
+	const user = userEvent.setup()
+	render(<App />)
+
+	await user.keyboard('l')
+	expect(screen.getByText('scroll')).toBeInTheDocument()
+
+	await user.keyboard('{Tab}')
+	expect(screen.getByRole('tab', { name: '▌ readme' })).toBeInTheDocument()
+
+	await user.keyboard('{Shift>}{Tab}{/Shift}')
+	expect(screen.getByRole('tab', { name: '▌ readme' })).toBeInTheDocument()
+})
+
 test('keys are ignored while a modifier is held', async () => {
 	const user = userEvent.setup()
 	render(<App />)

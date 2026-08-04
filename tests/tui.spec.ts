@@ -75,6 +75,20 @@ test('enter opens the selected section link', async ({ page, context }) => {
 	await popup.close()
 })
 
+test('tab traverses links inside the focused viewport', async ({ page }) => {
+	await gotoHydrated(page)
+	await page.keyboard.press('Tab') // projects, mapwright selected (two links)
+	await page.keyboard.press('l') // focus viewport
+
+	await page.keyboard.press('Tab')
+	const focused = await page.evaluate(() => ({
+		tag: document.activeElement?.tagName,
+		href: (document.activeElement as HTMLAnchorElement | null)?.href
+	}))
+	expect(focused.tag).toBe('A')
+	expect(focused.href).toContain('mapwright.io')
+})
+
 test('only one article is visible after hydration', async ({ page }) => {
 	await gotoHydrated(page)
 	const visible = await page.evaluate(

@@ -174,6 +174,7 @@ export function App() {
 					else scrollViewport(1e7)
 					break
 				case 'Tab':
+					if (!onList) return
 					event.preventDefault()
 					cycleTab(event.shiftKey ? -1 : 1)
 					break

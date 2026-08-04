@@ -145,3 +145,56 @@ test('keys are ignored while a modifier is held', async () => {
 	await user.keyboard('{Control>}j{/Control}')
 	expect(screen.getByRole('button', { name: '› mapwright' })).toBeInTheDocument()
 })
+
+test('slash opens the filter and typing narrows the list', async () => {
+	const user = userEvent.setup()
+	render(<App />)
+
+	await user.keyboard('/')
+	const input = screen.getByLabelText('Filter sections')
+	expect(input).toHaveFocus()
+
+	await user.type(input, 'mapwright')
+	expect(screen.getByText('1/1 filtered')).toBeInTheDocument()
+})
+
+test('the filter searches every tab, not just the active one', async () => {
+	const user = userEvent.setup()
+	render(<App />)
+
+	await user.keyboard('/')
+	await user.type(screen.getByLabelText('Filter sections'), 'stack')
+	expect(screen.getByRole('button', { name: '› stack' })).toBeInTheDocument()
+})
+
+test('escape cancels the filter and clears it', async () => {
+	const user = userEvent.setup()
+	render(<App />)
+
+	await user.keyboard('/')
+	await user.type(screen.getByLabelText('Filter sections'), 'mapwright')
+	await user.keyboard('{Escape}')
+
+	expect(screen.queryByLabelText('Filter sections')).not.toBeInTheDocument()
+	expect(screen.getByText('1/1')).toBeInTheDocument()
+})
+
+test('enter keeps the filter and closes the input', async () => {
+	const user = userEvent.setup()
+	render(<App />)
+
+	await user.keyboard('/')
+	await user.type(screen.getByLabelText('Filter sections'), 'mapwright')
+	await user.keyboard('{Enter}')
+
+	expect(screen.queryByLabelText('Filter sections')).not.toBeInTheDocument()
+})
+
+test('a filter with no match reports no match', async () => {
+	const user = userEvent.setup()
+	render(<App />)
+
+	await user.keyboard('/')
+	await user.type(screen.getByLabelText('Filter sections'), 'zzzzqqq')
+	expect(screen.getByText('no match')).toBeInTheDocument()
+})

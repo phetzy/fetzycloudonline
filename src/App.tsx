@@ -1,6 +1,14 @@
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import {
+	useCallback,
+	useEffect,
+	useRef,
+	useState,
+	useSyncExternalStore,
+	type KeyboardEvent
+} from 'react'
 import { DetailPane } from './components/DetailPane'
 import { HeaderRow } from './components/HeaderRow'
+import { HelpFooter } from './components/HelpFooter'
 import { ListPane } from './components/ListPane'
 import { TabBar } from './components/TabBar'
 import { TitleBar } from './components/TitleBar'
@@ -22,9 +30,12 @@ export function App() {
 		() => true,
 		() => false
 	)
-	// Become state in Task 8, when the filter input lands.
-	const filter = ''
-	const filtering = false
+	const [filter, setFilter] = useState('')
+	const [filtering, setFiltering] = useState(false)
+	const filterRef = useRef<HTMLInputElement>(null)
+	// The tab/selection in place when the filter opened, so Escape can restore
+	// it — typing may have carried the selection across tabs to reach a match.
+	const preFilterRef = useRef<{ tab: TabId; selected: string } | null>(null)
 
 	const selectTab = useCallback((t: TabId) => {
 		setTab(t)
@@ -64,8 +75,52 @@ export function App() {
 		[tab, selectTab]
 	)
 
+	const startFilter = useCallback(() => {
+		preFilterRef.current = { tab, selected }
+		setFiltering(true)
+		// The input mounts in this same commit; focus once it exists.
+		queueMicrotask(() => filterRef.current?.focus())
+	}, [tab, selected])
+
+	const cancelFilter = useCallback(() => {
+		setFiltering(false)
+		setFilter('')
+		const prev = preFilterRef.current
+		if (prev) {
+			setTab(prev.tab)
+			setSelected(prev.selected)
+		}
+		preFilterRef.current = null
+	}, [])
+
+	const onFilterChange = useCallback(
+		(value: string) => {
+			setFilter(value)
+			const list = visibleSections(tab, value, true)
+			if (list.length > 0 && !list.some((s) => s.id === selected)) {
+				setSelected(list[0].id)
+				setTab(list[0].tab)
+			}
+		},
+		[tab, selected]
+	)
+
+	const onFilterKeyDown = useCallback(
+		(event: KeyboardEvent<HTMLInputElement>) => {
+			if (event.key === 'Escape') {
+				event.preventDefault()
+				cancelFilter()
+			} else if (event.key === 'Enter') {
+				event.preventDefault()
+				setFiltering(false)
+				preFilterRef.current = null
+			}
+		},
+		[cancelFilter]
+	)
+
 	useEffect(() => {
-		const onKey = (event: KeyboardEvent) => {
+		const onKey = (event: globalThis.KeyboardEvent) => {
 			if (event.metaKey || event.ctrlKey || event.altKey) return
 			const tagName = (event.target as HTMLElement | null)?.tagName?.toLowerCase()
 			if (tagName === 'input' || tagName === 'textarea') return
@@ -75,6 +130,14 @@ export function App() {
 			const page = (vp?.clientHeight ?? 400) * 0.85
 
 			switch (event.key) {
+				case '/':
+					event.preventDefault()
+					startFilter()
+					break
+				case 'Escape':
+					event.preventDefault()
+					cancelFilter()
+					break
 				case 'j':
 				case 'ArrowDown':
 					event.preventDefault()
@@ -132,7 +195,7 @@ export function App() {
 
 		window.addEventListener('keydown', onKey)
 		return () => window.removeEventListener('keydown', onKey)
-	}, [focus, move, scrollViewport, cycleTab, current])
+	}, [focus, move, scrollViewport, cycleTab, current, startFilter, cancelFilter])
 
 	return (
 		<div className="h-screen overflow-hidden bg-crust p-[clamp(8px,2.4vw,32px)] font-mono text-text">
@@ -159,28 +222,14 @@ export function App() {
 							viewportRef={viewportRef}
 						/>
 					</div>
-					<div className="flex flex-none flex-wrap items-center gap-[14px] pt-[2px] text-[11.5px] text-subtext0">
-						<span>
-							<span className="text-lavender">↑/↓ j/k</span>{' '}
-							{focus === 'list' ? 'select' : 'scroll'}
-						</span>
-						<span>
-							<span className="text-lavender">h/l ←/→</span> pane
-						</span>
-						<span>
-							<span className="text-lavender">tab</span> next tab
-						</span>
-						<span>
-							<span className="text-lavender">/</span> filter
-						</span>
-						<span>
-							<span className="text-lavender">g/G</span> first/last
-						</span>
-						<span>
-							<span className="text-lavender">enter</span> open link
-						</span>
-						<span className="ml-auto text-subtext0">bubbletea · lipgloss</span>
-					</div>
+					<HelpFooter
+						focus={focus}
+						filtering={filtering}
+						filter={filter}
+						inputRef={filterRef}
+						onFilterChange={onFilterChange}
+						onFilterKeyDown={onFilterKeyDown}
+					/>
 				</div>
 			</div>
 		</div>

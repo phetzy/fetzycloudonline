@@ -12,8 +12,9 @@ export function App() {
 	const [tab, setTab] = useState<TabId>('readme')
 	const [selected, setSelected] = useState('readme')
 	const [focus, setFocus] = useState<'list' | 'viewport'>('list')
-	const [filtering, setFiltering] = useState(false)
-	const [filter, setFilter] = useState('')
+	// Become state in Task 8, when the filter input lands.
+	const filter = ''
+	const filtering = false
 
 	const selectTab = useCallback((t: TabId) => {
 		setTab(t)

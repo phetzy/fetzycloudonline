@@ -27,3 +27,10 @@ vite.config.ts.timestamp-*
 
 # SSH host key (generated locally, never committed)
 /.ssh/
+
+# OpenTofu / Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+.terraform.lock.hcl

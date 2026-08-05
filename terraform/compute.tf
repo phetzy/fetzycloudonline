@@ -39,6 +39,22 @@ resource "aws_instance" "fetzer" {
   iam_instance_profile   = aws_iam_instance_profile.fetzer.name
   vpc_security_group_ids = [aws_security_group.ssh_tui.id]
 
+  tags = {
+    Name = "${var.project}-ssh-tui"
+  }
+
+  # T4g defaults to unlimited credits, unlike T2: sustained CPU past the
+  # baseline bills as surplus credits instead of throttling. This instance is
+  # an unauthenticated listener open to 0.0.0.0/0 and ::/0, and the TUI's own
+  # defenses cap concurrency and connection rate but not CPU per session.
+  # "standard" turns a potential surprise bill into performance degradation
+  # instead — the right failure direction for a résumé server on a personal
+  # account. Flip to "unlimited" if the owner ever wants burst headroom
+  # instead; it's a one-line change.
+  credit_specification {
+    cpu_credits = "standard"
+  }
+
   # Gzipped: see the comment on local.user_data_rendered above. This is not
   # an optimization, it is what keeps RunInstances from failing.
   user_data_base64 = base64gzip(local.user_data_rendered)
@@ -72,6 +88,10 @@ resource "aws_instance" "fetzer" {
 
 resource "aws_eip" "fetzer" {
   domain = "vpc"
+
+  tags = {
+    Name = "${var.project}-ssh-tui"
+  }
 }
 
 # Associated separately (rather than via aws_instance.associate_public_ip_address)
@@ -79,5 +99,5 @@ resource "aws_eip" "fetzer" {
 # replacement triggered by user_data_replace_on_change above.
 resource "aws_eip_association" "fetzer" {
   instance_id   = aws_instance.fetzer.id
-  allocation_id = aws_eip.fetzer.id
+  allocation_id = aws_eip.fetzer.allocation_id
 }

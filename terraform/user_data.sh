@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Boot script for the SSH TUI instance, rendered by templatefile() in
-# terraform/main.tf (Task 7) and passed to the instance as user_data.
+# terraform/compute.tf (Task 7) and passed to the instance as user_data.
 #
 # This runs once per instance via cloud-init, but a reboot of a *replacement*
 # instance (new instance ID, same host-key SSM parameter) runs it again from

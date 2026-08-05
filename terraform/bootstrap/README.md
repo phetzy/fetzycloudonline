@@ -25,3 +25,18 @@ needs in its backend block at `tofu init` time.
 The bucket has `lifecycle { prevent_destroy = true }`. State is the one
 thing here that cannot be rebuilt from the repository, so this config
 refuses to let a `tofu destroy` (accidental or otherwise) take it out.
+
+## `.terraform.lock.hcl` is committed
+
+Unlike a typical throwaway ignore rule, the provider lock file here is
+tracked deliberately. Its job is supply-chain protection — it pins exact
+provider versions and hashes — and that protection is worth more than the
+convenience of skipping it. If you need to regenerate it for a platform
+other than the one you're running on (e.g. preparing this repo to be
+applied from both an Intel/AMD Linux box and an Apple Silicon Mac), run:
+
+```bash
+tofu providers lock -platform=linux_amd64 -platform=darwin_arm64
+```
+
+and commit the result.

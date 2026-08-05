@@ -10,8 +10,19 @@ data "aws_iam_openid_connect_provider" "github" {
 # underlying CMK's ARN (an alias ARN in a resource element does not by
 # itself grant access to the key), so the target key ARN is what the
 # instance policy below actually uses.
+#
+# AWS creates the aws/ssm managed key lazily, on the first SecureString ever
+# written in the region/account — until then the alias exists but its
+# target key ID is null, and this data source resolves to an empty ARN. The
+# depends_on forces this read to happen at apply time, after
+# aws_ssm_parameter.host_key (a SecureString) has been created and the key
+# is guaranteed to exist, rather than at plan time before it does. It is a
+# no-op once the key exists, so it stays correct on every later apply. Do
+# not remove this as "redundant" — without it, the first apply in a fresh
+# account silently grants access to nothing.
 data "aws_kms_alias" "ssm_default" {
-  name = "alias/aws/ssm"
+  name       = "alias/aws/ssm"
+  depends_on = [aws_ssm_parameter.host_key]
 }
 
 # ---------------------------------------------------------------------------
@@ -60,9 +71,15 @@ data "aws_iam_policy_document" "instance_permissions" {
 
   # The instance generates its own SSH host key at first boot and writes it
   # here itself, so it needs both read and write on this one parameter.
+  # GetParameters (plural) is included alongside GetParameter (singular)
+  # because they're distinct IAM actions mapped to distinct API calls/agent
+  # resolution paths (e.g. `aws ssm get-parameters` or the SSM agent's
+  # {{ssm-secure:...}} substitution) — the boot script for Task 7 hasn't
+  # been written yet, and SSM is the only way onto the box if it guesses
+  # wrong. Same resource ARN either way, so nothing extra is exposed.
   statement {
     effect    = "Allow"
-    actions   = ["ssm:GetParameter", "ssm:PutParameter"]
+    actions   = ["ssm:GetParameter", "ssm:GetParameters", "ssm:PutParameter"]
     resources = [aws_ssm_parameter.host_key.arn]
   }
 

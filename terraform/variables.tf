@@ -27,12 +27,31 @@ variable "github_repo" {
   type        = string
   default     = "phetzy/fetzycloudonline"
   description = "GitHub repository (owner/name) the instance pulls the SSH TUI build from."
+
+  # This value is interpolated verbatim into the deploy role's trust policy
+  # sub condition (StringEquals, not StringLike), so a malformed value fails
+  # closed rather than widening trust — but a bad value would still surface
+  # as an opaque STS AssumeRoleWithWebIdentity denial deep inside CI, which
+  # is expensive to diagnose. Fail fast here instead.
+  validation {
+    condition     = can(regex("^[^/]+/[^/]+$", var.github_repo))
+    error_message = "github_repo must be in \"owner/name\" form, e.g. \"phetzy/fetzycloudonline\"."
+  }
 }
 
 variable "github_ref" {
   type        = string
   default     = "refs/heads/main"
   description = "GitHub ref (branch or tag) the instance builds/deploys from."
+
+  # Same reasoning as github_repo's validation: this is interpolated into
+  # the trust policy's sub condition, and a value like "main" instead of
+  # "refs/heads/main" is an easy mistake that otherwise fails closed with an
+  # opaque STS denial in CI rather than here at plan time.
+  validation {
+    condition     = can(regex("^refs/(heads|tags)/.+$", var.github_ref))
+    error_message = "github_ref must be a full ref, e.g. \"refs/heads/main\" or \"refs/tags/v1\" — not a bare branch or tag name."
+  }
 }
 
 variable "ssh_port" {

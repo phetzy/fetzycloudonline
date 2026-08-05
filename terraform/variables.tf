@@ -1,3 +1,10 @@
+locals {
+  # Reference timestamp used only to validate the idle_timeout/max_session
+  # duration strings below via timeadd/timecmp — chosen arbitrarily, its
+  # value has no other significance.
+  duration_validation_epoch = "2000-01-01T00:00:00Z"
+}
+
 variable "region" {
   type        = string
   default     = "us-west-2"
@@ -45,8 +52,17 @@ variable "idle_timeout" {
   description = "Duration string (Go time.ParseDuration syntax) passed to the TUI server as -idle-timeout: disconnects a session after this long with no activity. The Go program refuses to start on a non-positive value, so an invalid setting here produces a boot-crash-looping instance rather than a running one with the control silently disabled."
 
   validation {
-    condition     = can(regex("^[0-9]+(ns|us|µs|ms|s|m|h)$", var.idle_timeout)) && !can(regex("^0(ns|us|µs|ms|s|m|h)$", var.idle_timeout))
-    error_message = "idle_timeout must be a positive Go duration string (e.g. \"5m\"), matching the TUI's -idle-timeout flag."
+    # timeadd parses Go duration syntax, so this accepts any value the Go
+    # program itself accepts, including compound durations like "1h30m", and
+    # can(...) makes an unparseable value ("banana") fail this condition
+    # instead of erroring out entirely. timecmp then rejects zero and
+    # negative durations, including zero-padded forms like "00s" that a
+    # regex-based check misses. A regex was tried first and dropped: it
+    # either let zero-padded zero durations through or rejected legitimate
+    # compound durations, whereas timeadd/timecmp gets both parseability and
+    # positivity right in one expression.
+    condition     = can(timecmp(timeadd(local.duration_validation_epoch, var.idle_timeout), local.duration_validation_epoch)) && timecmp(timeadd(local.duration_validation_epoch, var.idle_timeout), local.duration_validation_epoch) > 0
+    error_message = "idle_timeout must be a positive Go duration string (e.g. \"5m\" or \"1h30m\"), matching the TUI's -idle-timeout flag."
   }
 }
 
@@ -56,8 +72,10 @@ variable "max_session" {
   description = "Duration string (Go time.ParseDuration syntax) passed to the TUI server as -max-session: hard cap on a single session's total duration, active or not. The Go program refuses to start on a non-positive value, so an invalid setting here produces a boot-crash-looping instance rather than a running one with the control silently disabled."
 
   validation {
-    condition     = can(regex("^[0-9]+(ns|us|µs|ms|s|m|h)$", var.max_session)) && !can(regex("^0(ns|us|µs|ms|s|m|h)$", var.max_session))
-    error_message = "max_session must be a positive Go duration string (e.g. \"30m\"), matching the TUI's -max-session flag."
+    # See idle_timeout's validation comment above for why timeadd/timecmp is
+    # used instead of a regex.
+    condition     = can(timecmp(timeadd(local.duration_validation_epoch, var.max_session), local.duration_validation_epoch)) && timecmp(timeadd(local.duration_validation_epoch, var.max_session), local.duration_validation_epoch) > 0
+    error_message = "max_session must be a positive Go duration string (e.g. \"30m\" or \"1h30m\"), matching the TUI's -max-session flag."
   }
 }
 

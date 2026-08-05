@@ -86,10 +86,7 @@ chmod 755 "$install_path"
 systemctl reset-failed "$unit_name" || true
 
 echo "update-fetzer: restarting $unit_name"
-if ! systemctl restart "$unit_name"; then
-  echo "update-fetzer: systemctl restart $unit_name failed" >&2
-  exit 1
-fi
+systemctl restart "$unit_name" || true
 
 # Give the unit a moment to either settle into "active" or fail fast (it has
 # RestartSec=2s and Restart=on-failure, so a crash-on-start shows up here

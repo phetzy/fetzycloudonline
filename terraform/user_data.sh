@@ -57,7 +57,7 @@ fi
 # ---------------------------------------------------------------------------
 if ! id "$service_user" >/dev/null 2>&1; then
   echo "creating system user $service_user"
-  useradd --system --no-create-home --shell /usr/sbin/nologin "$service_user"
+  useradd --system --user-group --no-create-home --shell /usr/sbin/nologin "$service_user"
 fi
 
 # ---------------------------------------------------------------------------
@@ -68,6 +68,10 @@ fi
 # ---------------------------------------------------------------------------
 systemctl disable --now sshd || true
 systemctl mask sshd
+# Also mask the socket unit: AL2023 ships sshd.service today, but if socket
+# activation ever lands, sshd.socket alone would still hold port 22.
+systemctl disable --now sshd.socket 2>/dev/null || true
+systemctl mask sshd.socket 2>/dev/null || true
 
 # ---------------------------------------------------------------------------
 # 4. Fetch or generate the SSH host key.
@@ -119,6 +123,9 @@ if [ "$fetch_status" -eq 0 ] && [ "$fetched_value" != "$placeholder" ] && [ -n "
   # of a program other than printf itself, and the umask keeps the file from
   # ever being briefly world-readable between creation and chmod.
   ( umask 077 && printf '%s\n' "$fetched_value" > "$host_key_path" )
+  # Turns a truncated/wrong-type SSM value into a loud boot failure instead
+  # of a service that mysteriously won't start.
+  ssh-keygen -y -f "$host_key_path" >/dev/null
 else
   echo "no usable host key in SSM (placeholder or fetch failure), generating one"
   rm -f "$host_key_path" "$${host_key_path}.pub"
@@ -146,7 +153,7 @@ cat > "$env_file" <<ENV_EOF
 AWS_REGION=$region
 ARTIFACT_BUCKET=$artifact_bucket
 ENV_EOF
-chmod 644 "$env_file"
+chmod 600 "$env_file"
 
 # ---------------------------------------------------------------------------
 # 6. Install the update script the deploy pipeline invokes via SSM.
@@ -158,15 +165,9 @@ chown root:root "$update_script_path"
 chmod 755 "$update_script_path"
 
 # ---------------------------------------------------------------------------
-# 7. Run it once to pull whatever binary already exists. The very first
-#    apply happens before the first deploy, so "no binary published yet" is
-#    expected and must not fail the boot.
-# ---------------------------------------------------------------------------
-echo "running initial update-fetzer.sh (missing binary is non-fatal here)"
-"$update_script_path" || echo "initial pull did not complete (likely no binary published yet); continuing"
-
-# ---------------------------------------------------------------------------
-# 8. Install and start the unit.
+# 7. Install the unit and load it, before running the update script — a
+#    replacement instance with a binary already published would otherwise
+#    have update-fetzer.sh try to restart a unit that isn't loaded yet.
 # ---------------------------------------------------------------------------
 cat > "$unit_path" <<'UNIT_EOF'
 ${service_unit}
@@ -175,6 +176,14 @@ chown root:root "$unit_path"
 chmod 644 "$unit_path"
 
 systemctl daemon-reload
+
+# ---------------------------------------------------------------------------
+# 8. Run it once to pull whatever binary already exists. The very first
+#    apply happens before the first deploy, so "no binary published yet" is
+#    expected and must not fail the boot.
+# ---------------------------------------------------------------------------
+echo "running initial update-fetzer.sh (missing binary is non-fatal here)"
+"$update_script_path" || echo "initial pull did not complete (likely no binary published yet); continuing"
 
 # Only start the unit now if a binary actually exists. On the very first
 # apply, nothing has been deployed yet: ExecStart would point at a missing

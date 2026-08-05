@@ -10,6 +10,9 @@
 Description=fetzer SSH TUI
 After=network-online.target
 Wants=network-online.target
+# Bounds restarts so a missing/crashing binary fails clean, not forever.
+StartLimitIntervalSec=60
+StartLimitBurst=5
 
 [Service]
 Type=simple

@@ -65,6 +65,10 @@ if ! "$tmp_bin" -h >/dev/null 2>&1; then
   exit 1
 fi
 
+# Keep a backup so a build that starts and then crashes can be rolled back,
+# not just a build that fails the -h check above. None on the first-ever deploy.
+[ -e "$install_path" ] && cp -a "$install_path" "$install_path.prev"
+
 # Swap it in. This mv is the point of no return: from here a failure is
 # reported loudly rather than silently leaving the old binary in place,
 # because the workflow needs a non-zero exit to know the deploy is bad.
@@ -76,6 +80,10 @@ if ! mv -f "$tmp_bin" "$install_path"; then
 fi
 chown root:root "$install_path"
 chmod 755 "$install_path"
+
+# Clears any prior start-limit-hit state so a stale failure from a previous
+# bad deploy can't mask this restart's real result.
+systemctl reset-failed "$unit_name" || true
 
 echo "update-fetzer: restarting $unit_name"
 if ! systemctl restart "$unit_name"; then
@@ -90,7 +98,15 @@ sleep 3
 if ! systemctl is-active --quiet "$unit_name"; then
   echo "update-fetzer: $unit_name is not active after restart" >&2
   systemctl status --no-pager "$unit_name" >&2 || true
+  # Roll back so a bad build doesn't take the service down until fixed.
+  if [ -e "$install_path.prev" ]; then
+    echo "update-fetzer: rolling back to previous binary" >&2
+    mv -f "$install_path.prev" "$install_path"
+    systemctl reset-failed "$unit_name" || true
+    systemctl restart "$unit_name" || true
+  fi
   exit 1
 fi
 
+rm -f "$install_path.prev"
 echo "update-fetzer: deploy complete, $unit_name is active"

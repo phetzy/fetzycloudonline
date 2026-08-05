@@ -1,0 +1,52 @@
+# systemd unit for the SSH TUI server. Rendered by templatefile() in
+# terraform/main.tf (Task 7) with the TUI's tunables, and the rendered text
+# is embedded verbatim into terraform/user_data.sh, which writes it to
+# /etc/systemd/system/fetzer.service on boot.
+#
+# Runs as the unprivileged `fetzer` system user, not root.
+# AmbientCapabilities=CAP_NET_BIND_SERVICE is what lets that user bind port
+# ${ssh_port} despite being unprivileged.
+[Unit]
+Description=fetzer SSH TUI
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=fetzer
+Group=fetzer
+ExecStart=/usr/local/bin/fetzer -addr :${ssh_port} -host-key /var/lib/fetzer/host_key \
+  -idle-timeout ${idle_timeout} -max-session ${max_session} \
+  -max-conns-per-ip ${max_conns_per_ip} -rate-per-min ${rate_per_min}
+Restart=on-failure
+RestartSec=2s
+
+# Hardening. NoNewPrivileges + the narrow capability bounding set means the
+# ambient CAP_NET_BIND_SERVICE grant is the only elevated thing this process
+# can ever do. ProtectSystem=strict makes the whole filesystem read-only
+# except ReadWritePaths below, which is exactly and only the directory
+# holding the host key.
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6
+RestrictNamespaces=true
+LockPersonality=true
+
+# Load-bearing, not decoration: the SSH library this program uses
+# accumulates `env` requests per channel with no cap, and panic coverage in
+# the program is only partial. This ceiling turns an unbounded-growth bug
+# into a restart (caught by Restart=on-failure above) instead of an
+# instance-wide OOM that could take down the SSM agent alongside it.
+MemoryMax=256M
+
+ReadWritePaths=/var/lib/fetzer
+
+[Install]
+WantedBy=multi-user.target

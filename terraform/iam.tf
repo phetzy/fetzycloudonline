@@ -147,17 +147,14 @@ data "aws_iam_policy_document" "github_deploy_permissions" {
 
   # ssm:SendCommand requires both the document and the target instance to be
   # granted — granting only the document would let this role command every
-  # instance in the account. The instance itself isn't created until Task 7,
-  # so it can't be referenced by resource yet; this is scoped as tightly as
-  # possible in the meantime (every EC2 instance ARN in this account and
-  # region, rather than `*`), and should be narrowed to the instance's own
-  # ARN once Task 7 creates it.
+  # instance in the account. Scoped to the one instance this role should ever
+  # touch.
   statement {
     effect  = "Allow"
     actions = ["ssm:SendCommand"]
     resources = [
       "arn:aws:ssm:${var.region}::document/AWS-RunShellScript",
-      "arn:aws:ec2:${var.region}:${data.aws_caller_identity.current.account_id}:instance/*",
+      aws_instance.fetzer.arn,
     ]
   }
 

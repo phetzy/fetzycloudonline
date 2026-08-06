@@ -67,6 +67,74 @@ func TestSessionColorProfile(t *testing.T) {
 			environ: []string{"TERM=xterm-256color", "COLORTERM=yes"},
 			want:    termenv.ANSI256,
 		},
+
+		// termsAlwaysTrueColor: TERM values termenv's own ColorProfile()
+		// (termenv_unix.go) always treats as truecolor, regardless of
+		// COLORTERM. OpenSSH does not forward COLORTERM by default, so a
+		// visitor on one of these terminals typically arrives with only
+		// TERM set. Every entry in the real table is covered below.
+		{
+			name:    "TERM alacritty (name table, no COLORTERM)",
+			environ: []string{"TERM=alacritty"},
+			want:    termenv.TrueColor,
+		},
+		{
+			name:    "TERM contour (name table, no COLORTERM)",
+			environ: []string{"TERM=contour"},
+			want:    termenv.TrueColor,
+		},
+		{
+			name:    "TERM rio (name table, no COLORTERM)",
+			environ: []string{"TERM=rio"},
+			want:    termenv.TrueColor,
+		},
+		{
+			name:    "TERM wezterm (name table, no COLORTERM)",
+			environ: []string{"TERM=wezterm"},
+			want:    termenv.TrueColor,
+		},
+		{
+			name:    "TERM xterm-ghostty (name table, no COLORTERM)",
+			environ: []string{"TERM=xterm-ghostty"},
+			want:    termenv.TrueColor,
+		},
+		{
+			name:    "TERM xterm-kitty (name table, no COLORTERM)",
+			environ: []string{"TERM=xterm-kitty"},
+			want:    termenv.TrueColor,
+		},
+
+		// Precedence: the name table is checked ahead of the generic
+		// "256color" substring branch and the ANSI default. None of
+		// termenv's own always-truecolor TERM names happen to contain
+		// "256color" (so there is no real-world name that would otherwise
+		// fall into the 256color branch), but xterm-kitty does contain
+		// "color" and would otherwise land on the generic ANSI default —
+		// this pins that the name table wins ahead of that fallthrough.
+		{
+			name:    "name table wins over the generic default ANSI branch",
+			environ: []string{"TERM=xterm-kitty"},
+			want:    termenv.TrueColor,
+		},
+
+		// Not in the name table, and shouldn't be regressed by adding it:
+		// these fall through to the existing 256color/default logic exactly
+		// as before.
+		{
+			name:    "TERM foot is not in the name table",
+			environ: []string{"TERM=foot"},
+			want:    termenv.ANSI,
+		},
+		{
+			name:    "TERM screen is not in the name table",
+			environ: []string{"TERM=screen"},
+			want:    termenv.ANSI,
+		},
+		{
+			name:    "TERM tmux-256color is not in the name table",
+			environ: []string{"TERM=tmux-256color"},
+			want:    termenv.ANSI256,
+		},
 	}
 
 	for _, c := range cases {

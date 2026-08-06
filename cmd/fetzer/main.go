@@ -252,13 +252,33 @@ func newSessionRenderer(sess ssh.Session) *lipgloss.Renderer {
 	return r
 }
 
+// termsAlwaysTrueColor is the set of TERM values termenv's own
+// Output.ColorProfile() (termenv@v0.16.0/termenv_unix.go) treats as
+// truecolor unconditionally, regardless of COLORTERM. OpenSSH does not
+// forward COLORTERM by default, so a visitor on one of these terminals
+// arrives with only TERM set; without matching this table they would be
+// downgraded to plain ANSI here even though the OSC-11-querying code path
+// this function replaces gave them full color. Reproduced verbatim from
+// that switch rather than invented, since staying consistent with termenv
+// is the point — this function exists to preserve termenv's own decision,
+// just without the blocking query.
+var termsAlwaysTrueColor = map[string]bool{
+	"alacritty":     true,
+	"contour":       true,
+	"rio":           true,
+	"wezterm":       true,
+	"xterm-ghostty": true,
+	"xterm-kitty":   true,
+}
+
 // sessionColorProfile derives the termenv color profile to use for a
 // session from its environment, using the conventional COLORTERM/TERM
 // precedence rules: COLORTERM of "truecolor" or "24bit" means truecolor
 // (checked first, since it is the most specific signal and can promote a
-// terminal above what TERM alone would suggest); otherwise a TERM
-// containing "256color" means 256-color; TERM of "dumb" or empty/missing
-// means no color; anything else gets basic ANSI.
+// terminal above what TERM alone would suggest); otherwise a TERM matching
+// termsAlwaysTrueColor means truecolor; otherwise a TERM containing
+// "256color" means 256-color; TERM of "dumb" or empty/missing means no
+// color; anything else gets basic ANSI.
 //
 // This is a pure function of the environment (ssh.Session.Environ(), which
 // already carries TERM — see (ssh.Session).Environ's doc comment — plus
@@ -281,6 +301,8 @@ func sessionColorProfile(environ []string) termenv.Profile {
 	}
 
 	switch term := lookup("TERM"); {
+	case termsAlwaysTrueColor[term]:
+		return termenv.TrueColor
 	case term == "" || term == "dumb":
 		return termenv.Ascii
 	case strings.Contains(term, "256color"):

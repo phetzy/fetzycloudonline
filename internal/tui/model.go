@@ -102,7 +102,14 @@ func (m Model) SetSize(width, height int) Model {
 
 	lay := m.computeLayout()
 	m.viewport.Width = paneTextWidth(lay.detailOuterW)
-	m.viewport.Height = paneStyleDim(lay.detailOuterH)
+	// -1: renderDetailPane reserves one fixed row above the viewport for
+	// the starship-prompt bar (see promptBar in view.go), which is no
+	// longer part of the scrollable content.
+	vpH := paneStyleDim(lay.detailOuterH) - 1
+	if vpH < 0 {
+		vpH = 0
+	}
+	m.viewport.Height = vpH
 	m.syncViewport()
 	return m
 }

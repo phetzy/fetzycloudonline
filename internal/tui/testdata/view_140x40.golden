@@ -1,9 +1,15 @@
-DAVID FETZER · software engineer · boise, id · remote                                                                                       
- ▌ readme   projects   work   contact                                                                                                       
+╭──────────────────────────────────────────╮ ╭─────────────────────────────────────────────────────────────────────────────────────────────╮
+│  D A V I D    F E T Z E R                │ │  role Software Engineer at C1                                                               │
+│  software engineer · boise, id · remote  │ │  status ● Open to interesting conversations                                                 │
+╰──────────────────────────────────────────╯ │  builds map servers · CLI tools · self-hosted platforms · hardware                          │
+                                             ╰─────────────────────────────────────────────────────────────────────────────────────────────╯
+╭──────────╮╭──────────╮╭──────╮╭─────────╮                                                                                                 
+│ ▌ readme ││ projects ││ work ││ contact │                                                                                                 
+╰──────────╯╰──────────╯╰──────╯╰─────────╯                                                                                                 
 ╭────────────────────────╮╭────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-│ › README.md            ││ ~/site/README.md  main 󰴛 ❯                                                                                    │
-│ 1/1                    ││                                                                                                                │
-│                        ││ software engineer · boise, id · remote                                                                         │
+│ README                 ││ ~/site/README.md  main 󰴛 ❯                                                                                    │
+│ ────────────────────── ││ David Fetzer                                                                                                   │
+│ › README.md            ││ software engineer · boise, id · remote                                                                         │
 │                        ││                                                                                                                │
 │                        ││ I build infrastructure — map servers, command-line tools, self-hosted platforms, and the hardware underneath   │
 │                        ││ them.                                                                                                          │
@@ -12,9 +18,13 @@ DAVID FETZER · software engineer · boise, id · remote
 │                        ││ binary for browserless file transfer, a private LLM and RAG platform on Kubernetes, and a secure element board │
 │                        ││ for the Raspberry Pi.                                                                                          │
 │                        ││                                                                                                                │
-│                        ││ location: Boise, ID · remote                                                                                   │
-│                        ││ role: Software Engineer at C1, March 2022 – present                                                            │
-│                        ││ status: Open to interesting conversations                                                                      │
+│                        ││ ────────────────────────────────────────────────────────────────────────────────────────────────────────────── │
+│                        ││ location           Boise, ID · remote                                                                          │
+│                        ││ ────────────────────────────────────────────────────────────────────────────────────────────────────────────── │
+│                        ││ role               Software Engineer at C1, March 2022 – present                                               │
+│                        ││ ────────────────────────────────────────────────────────────────────────────────────────────────────────────── │
+│                        ││ status             Open to interesting conversations                                                           │
+│                        ││ ────────────────────────────────────────────────────────────────────────────────────────────────────────────── │
 │                        ││                                                                                                                │
 │                        ││                                                                                                                │
 │                        ││                                                                                                                │
@@ -25,16 +35,6 @@ DAVID FETZER · software engineer · boise, id · remote
 │                        ││                                                                                                                │
 │                        ││                                                                                                                │
 │                        ││                                                                                                                │
-│                        ││                                                                                                                │
-│                        ││                                                                                                                │
-│                        ││                                                                                                                │
-│                        ││                                                                                                                │
-│                        ││                                                                                                                │
-│                        ││                                                                                                                │
-│                        ││                                                                                                                │
-│                        ││                                                                                                                │
-│                        ││                                                                                                                │
-│                        ││                                                                                                                │
-│                        ││                                                                                                                │
+│ 1/1                    ││                                                                                                                │
 ╰────────────────────────╯╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
-↑/↓ j/k select • h/l ←/→ pane • tab next tab • / filter • g/G first/last • enter show link • q quit                                         
+↑/↓ j/k select • h/l ←/→ pane • tab next tab • / filter • g/G first/last • enter show link • q quit                     bubbletea · lipgloss

@@ -8,7 +8,10 @@ import (
 // Catppuccin Macchiato palette, matching the web build.
 const (
 	colBase      = lipgloss.Color("#24273a")
+	colMantle    = lipgloss.Color("#1e2030")
 	colSurface0  = lipgloss.Color("#363a4f")
+	colSurface1  = lipgloss.Color("#494d64")
+	colRule      = lipgloss.Color("#2f3348")
 	colText      = lipgloss.Color("#cad3f5")
 	colSubtext1  = lipgloss.Color("#b8c0e0")
 	colSubtext0  = lipgloss.Color("#a5adcb")
@@ -24,14 +27,45 @@ type Styles struct {
 	Title    lipgloss.Style
 	TitleSub lipgloss.Style
 
+	// NameCard and MetaCard are the two bordered boxes in the header row:
+	// the "DAVID FETZER" identity card and the role/status/builds card
+	// beside it. Border-only + padding, applied around already-styled
+	// inner content, so they never touch the color-tested Title style.
+	NameCard lipgloss.Style
+	MetaCard lipgloss.Style
+
 	TabActive   lipgloss.Style
 	TabInactive lipgloss.Style
+
+	// ChipActiveBorder and ChipInactiveBorder wrap the already-rendered
+	// TabActive/TabInactive text in a bordered box (border-only, no
+	// foreground/background of their own) so the tested TabActive color
+	// combination keeps rendering unchanged underneath the border.
+	ChipActiveBorder   lipgloss.Style
+	ChipInactiveBorder lipgloss.Style
 
 	PaneFocused   lipgloss.Style
 	PaneUnfocused lipgloss.Style
 
-	List   lipgloss.Style
-	Detail lipgloss.Style
+	// ListHeader is the "README"-style label above the list pane's rows.
+	ListHeader lipgloss.Style
+	// Rule draws a faint horizontal separator in the pane border color.
+	Rule lipgloss.Style
+	// TableRule draws the hairline between metadata table rows.
+	TableRule lipgloss.Style
+
+	List          lipgloss.Style
+	SelectedRow   lipgloss.Style
+	UnselectedRow lipgloss.Style
+	Detail        lipgloss.Style
+
+	// RowLabel and RowBody style the two-column metadata table's columns.
+	RowLabel lipgloss.Style
+	RowBody  lipgloss.Style
+
+	// PromptBar gives the detail pane's starship-prompt header row its own
+	// background fill, distinct from the pane body behind it.
+	PromptBar lipgloss.Style
 
 	Help lipgloss.Style
 }
@@ -61,6 +95,16 @@ func NewStyles(r *lipgloss.Renderer) Styles {
 		TitleSub: r.NewStyle().
 			Foreground(colSubtext0),
 
+		NameCard: r.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(colBorderAcc).
+			Padding(0, 2),
+
+		MetaCard: r.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(colSurface0).
+			Padding(0, 2),
+
 		TabActive: r.NewStyle().
 			Foreground(colBase).
 			Background(colLavender).
@@ -71,17 +115,50 @@ func NewStyles(r *lipgloss.Renderer) Styles {
 			Foreground(colSubtext0).
 			Padding(0, 1),
 
+		ChipActiveBorder: r.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(colBorderAcc),
+
+		ChipInactiveBorder: r.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(colSurface0),
+
 		PaneFocused: pane.
 			BorderForeground(colBorderAcc),
 
 		PaneUnfocused: pane.
 			BorderForeground(colSurface0),
 
+		ListHeader: r.NewStyle().
+			Foreground(colSubtext0),
+
+		Rule: r.NewStyle().
+			Foreground(colSurface0),
+
+		TableRule: r.NewStyle().
+			Foreground(colRule),
+
 		List: r.NewStyle().
 			Foreground(colText),
 
+		SelectedRow: r.NewStyle().
+			Foreground(colAccent).
+			Background(colSurface1),
+
+		UnselectedRow: r.NewStyle().
+			Foreground(colSubtext1),
+
 		Detail: r.NewStyle().
 			Foreground(colText),
+
+		RowLabel: r.NewStyle().
+			Foreground(colLavender),
+
+		RowBody: r.NewStyle().
+			Foreground(colSubtext1),
+
+		PromptBar: r.NewStyle().
+			Background(colMantle),
 
 		Help: r.NewStyle().
 			Foreground(colSubtext1),

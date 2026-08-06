@@ -55,6 +55,32 @@ func paneTextWidth(outer int) int {
 	return d
 }
 
+// cardPaddingOverhead is the header cards' horizontal padding (Padding(0,
+// 2): two columns on each side), wider than the panes' so the name/meta
+// boxes read as their own distinct chrome rather than matching pane insets
+// exactly — the same split paneStyleDim/paneTextWidth apply to panes.
+const cardPaddingOverhead = 4
+
+// cardStyleDim is the value to give a header card's lipgloss.Style.Width for
+// an outer (bordered) size of outer.
+func cardStyleDim(outer int) int {
+	d := outer - paneBorderOverhead
+	if d < 0 {
+		return 0
+	}
+	return d
+}
+
+// cardTextWidth is how many columns of text a header card of outer width
+// outer can hold.
+func cardTextWidth(outer int) int {
+	d := outer - paneBorderOverhead - cardPaddingOverhead
+	if d < 0 {
+		return 0
+	}
+	return d
+}
+
 // frameLayout is the terminal size broken down into the frame's regions.
 // Every field derives from Model.width/height; nothing here is a constant
 // tied to a specific terminal size.
@@ -66,7 +92,7 @@ type frameLayout struct {
 	detailOuterH int
 }
 
-// computeLayout works out where the title block, tab bar, panes, and help
+// computeLayout works out where the header row, tab bar, panes, and help
 // footer sit for the model's current width and height. It falls back to
 // 80x24 only as a defensive default for the pathological case of View being
 // called before any size has ever been set — every real render path goes
@@ -80,7 +106,7 @@ func (m Model) computeLayout() frameLayout {
 		h = 24
 	}
 
-	fixed := lipgloss.Height(m.renderTitle(w)) +
+	fixed := lipgloss.Height(m.renderHeaderRow(w)) +
 		lipgloss.Height(m.renderTabBar(w)) +
 		lipgloss.Height(m.renderFooter(w))
 	mainH := h - fixed
@@ -124,17 +150,8 @@ func (m Model) computeLayout() frameLayout {
 	}
 }
 
-// renderTitle is the identity line: the readme section's title and kicker,
-// which is the same identity block regardless of which tab is active.
-func (m Model) renderTitle(width int) string {
-	id := m.identitySection()
-	line := m.styles.Title.Render(strings.ToUpper(id.Title))
-	if id.Kicker != "" {
-		line += m.styles.TitleSub.Render(" · " + id.Kicker)
-	}
-	return truncateToWidth(line, width)
-}
-
+// identitySection returns the readme section, which carries the site-wide
+// identity (name, role/kicker) regardless of which tab is active.
 func (m Model) identitySection() site.Section {
 	for _, s := range m.content.Sections {
 		if s.ID == "readme" {
@@ -147,9 +164,204 @@ func (m Model) identitySection() site.Section {
 	return site.Section{}
 }
 
-// renderTabBar renders one tab per entry in content.Tabs, marking the
-// active one with a leading bar, and never grows past width.
+// rowByLabel finds a row by its label (case-insensitive), so the header
+// card can pull "role" and "status" out of the readme section's own rows
+// rather than duplicating their copy.
+func rowByLabel(s site.Section, label string) string {
+	for _, r := range s.Rows {
+		if strings.EqualFold(r.Label, label) {
+			return r.Body
+		}
+	}
+	return ""
+}
+
+// letterSpace inserts a thin space between every rune of s, and widens
+// existing word spaces, approximating the web build's letter-spacing on
+// "DAVID FETZER" within a monospace grid.
+func letterSpace(s string) string {
+	runes := []rune(s)
+	parts := make([]string, 0, len(runes))
+	for _, r := range runes {
+		if r == ' ' {
+			parts = append(parts, "  ")
+			continue
+		}
+		parts = append(parts, string(r))
+	}
+	return strings.Join(parts, " ")
+}
+
+// renderNameCard renders the bordered "DAVID FETZER" identity box: the
+// title, letterspaced when there is room for it, and the readme section's
+// kicker beneath it as the subtitle. Both strings come straight from
+// content.json (Title and Kicker) — nothing here is invented copy.
+func (m Model) renderNameCard(outerW int) string {
+	id := m.identitySection()
+	title := strings.ToUpper(id.Title)
+	spaced := letterSpace(title)
+
+	textW := cardTextWidth(outerW)
+	styleW := cardStyleDim(outerW)
+
+	titleLine := title
+	if textW >= lipgloss.Width(spaced) {
+		titleLine = spaced
+	}
+
+	lines := []string{
+		m.styles.Title.Render(truncateToWidth(titleLine, textW)),
+	}
+	if id.Kicker != "" {
+		lines = append(lines, m.styles.TitleSub.Render(truncateToWidth(id.Kicker, textW)))
+	}
+
+	return m.styles.NameCard.Width(styleW).Render(strings.Join(lines, "\n"))
+}
+
+// shortRole trims content.json's role row down to the clause before the
+// first comma — "Software Engineer at C1, March 2022 – present" becomes
+// "Software Engineer at C1". It is a substring of the exact content.json
+// text, not paraphrased copy: the dates stay intact in the metadata table
+// below, and repeating them in the meta card unbalanced it against the
+// name card beside it.
+func shortRole(role string) string {
+	if i := strings.Index(role, ","); i >= 0 {
+		return role[:i]
+	}
+	return role
+}
+
+// buildsLine is the meta card's third line. It is not in content.json —
+// it is hardcoded, verbatim, in the web build's src/components/HeaderRow.tsx
+// (lines 21-22). Reproduced here character-for-character (including the
+// middot separators) because it is real, already-shipped site copy, not
+// invented text; see the report for why it lives here as a constant
+// instead of coming from content.json like everything else in this file.
+const buildsLine = "map servers · CLI tools · self-hosted platforms · hardware"
+
+// renderMetaCard renders the bordered role/status/builds box beside the
+// name card: "role" and "status" pulled from the readme section's own rows
+// in content.json, with a green status dot, plus the "builds" line from
+// HeaderRow.tsx (see buildsLine).
+func (m Model) renderMetaCard(outerW int) string {
+	id := m.identitySection()
+	role := shortRole(rowByLabel(id, "role"))
+	status := rowByLabel(id, "status")
+
+	textW := cardTextWidth(outerW)
+	styleW := cardStyleDim(outerW)
+
+	roleLine := m.styles.TitleSub.Render("role ") + m.styles.Detail.Render(role)
+	dot := m.renderer.NewStyle().Foreground(colGreen).Render("● ")
+	statusLine := m.styles.TitleSub.Render("status ") + dot +
+		m.renderer.NewStyle().Foreground(colGreen).Render(status)
+	buildsLineRendered := m.styles.TitleSub.Render("builds ") + m.styles.Detail.Render(buildsLine)
+
+	lines := []string{
+		truncateToWidth(roleLine, textW),
+		truncateToWidth(statusLine, textW),
+		truncateToWidth(buildsLineRendered, textW),
+	}
+
+	return m.styles.MetaCard.Width(styleW).Render(strings.Join(lines, "\n"))
+}
+
+// renderHeaderRow lays out the name card and the meta card beside it when
+// there is room, or stacked full-width when there is not. Below
+// wideThreshold — the same column count at which the list and detail panes
+// themselves give up sitting side by side — there simply is not enough
+// vertical room left for two bordered, multi-line cards on top of stacked
+// panes, so the header collapses to the single compact identity line the
+// TUI always had: trading the bordered chrome for the space stacking the
+// panes already gives up. The decision is derived from the current
+// terminal width, never a constant tied to a specific terminal size.
+func (m Model) renderHeaderRow(width int) string {
+	id := m.identitySection()
+	if width < wideThreshold {
+		return m.renderCompactHeader(width)
+	}
+	title := strings.ToUpper(id.Title)
+
+	nameContentW := lipgloss.Width(letterSpace(title))
+	if w := lipgloss.Width(id.Kicker); w > nameContentW {
+		nameContentW = w
+	}
+	nameOuterW := nameContentW + cardPaddingOverhead + paneBorderOverhead
+
+	role := shortRole(rowByLabel(id, "role"))
+	status := rowByLabel(id, "status")
+	metaContentW := lipgloss.Width("role " + role)
+	if w := lipgloss.Width("status ● " + status); w > metaContentW {
+		metaContentW = w
+	}
+	if w := lipgloss.Width("builds " + buildsLine); w > metaContentW {
+		metaContentW = w
+	}
+	metaOuterW := metaContentW + cardPaddingOverhead + paneBorderOverhead
+
+	const gap = 1
+	sideBySide := width >= nameOuterW+gap+metaOuterW
+
+	if sideBySide {
+		if nameOuterW > width {
+			nameOuterW = width
+		}
+		metaOuterW = width - nameOuterW - gap
+		name := m.renderNameCard(nameOuterW)
+		meta := m.renderMetaCard(metaOuterW)
+		return lipgloss.JoinHorizontal(lipgloss.Top, name, strings.Repeat(" ", gap), meta)
+	}
+
+	name := m.renderNameCard(width)
+	meta := m.renderMetaCard(width)
+	return lipgloss.JoinVertical(lipgloss.Left, name, meta)
+}
+
+// renderCompactHeader is the header row shown below wideThreshold: the
+// identity line the TUI always had, no bordered cards. Both strings are
+// content.json's Title and Kicker for the readme section.
+func (m Model) renderCompactHeader(width int) string {
+	id := m.identitySection()
+	line := m.styles.Title.Render(strings.ToUpper(id.Title))
+	if id.Kicker != "" {
+		line += m.styles.TitleSub.Render(" · " + id.Kicker)
+	}
+	return truncateToWidth(line, width)
+}
+
+// renderTabBar renders one bordered chip per entry in content.Tabs, marking
+// the active one with a leading bar and a distinct border color, and never
+// grows past width. Below wideThreshold it falls back to plain unbordered
+// labels, for the same reason renderHeaderRow falls back to a single line
+// there — see its comment.
 func (m Model) renderTabBar(width int) string {
+	if width < wideThreshold {
+		return m.renderCompactTabBar(width)
+	}
+	// The active chip's "▌ " marker is a prefix on top of the label, not a
+	// substitute for it, so it does not need compensating leading spaces on
+	// the inactive chips — those get plain, symmetrically padded labels
+	// (Padding(0, 1) on TabInactive handles both sides equally). Only the
+	// active chip is asymmetric, by design: it alone carries the bar.
+	chips := make([]string, 0, len(m.content.Tabs))
+	for i, t := range m.content.Tabs {
+		if i == m.tabIdx {
+			text := m.styles.TabActive.Render("▌ " + t.Label)
+			chips = append(chips, m.styles.ChipActiveBorder.Render(text))
+			continue
+		}
+		text := m.styles.TabInactive.Render(t.Label)
+		chips = append(chips, m.styles.ChipInactiveBorder.Render(text))
+	}
+	row := lipgloss.JoinHorizontal(lipgloss.Top, chips...)
+	return truncateBlockToWidth(row, width)
+}
+
+// renderCompactTabBar renders one plain-text tab per entry in
+// content.Tabs, marking the active one with a leading bar, and never grows
+// past width.
+func (m Model) renderCompactTabBar(width int) string {
 	parts := make([]string, 0, len(m.content.Tabs))
 	for i, t := range m.content.Tabs {
 		if i == m.tabIdx {
@@ -161,11 +373,31 @@ func (m Model) renderTabBar(width int) string {
 	return truncateToWidth(strings.Join(parts, " "), width)
 }
 
+// creditLine is the right-aligned "bubbletea · lipgloss" credit shown
+// opposite the footer's key bindings, mirroring HelpFooter.tsx's
+// margin-left: auto span. It is decorative chrome, not content.json copy.
+const creditLine = "bubbletea · lipgloss"
+
+// withCredit right-pads left with the credit line so it lands flush right
+// within width. If there is no room for both, the credit is dropped rather
+// than truncating the (more important) key bindings.
+func (m Model) withCredit(left string, width int) string {
+	credit := m.styles.Help.Render(creditLine)
+	leftW := lipgloss.Width(left)
+	creditW := lipgloss.Width(credit)
+	gap := width - leftW - creditW
+	if gap < 1 {
+		return left
+	}
+	return left + strings.Repeat(" ", gap) + credit
+}
+
 // renderHelp is the key-binding footer, generated from the same KeyMap that
 // handles input so it cannot drift from actual behavior. While the filter
 // input is open it is replaced by renderFilterBar — see View.
-func (m Model) renderHelp() string {
-	return m.styles.Help.Render(m.help.View(m.keys))
+func (m Model) renderHelp(width int) string {
+	left := m.styles.Help.Render(m.help.View(m.keys))
+	return truncateToWidth(m.withCredit(left, width), width)
 }
 
 // renderFilterBar is the footer shown while the filter input is open,
@@ -173,7 +405,8 @@ func (m Model) renderHelp() string {
 func (m Model) renderFilterBar(width int) string {
 	prompt := m.renderer.NewStyle().Foreground(colGreen).Render("filter> ")
 	query := m.styles.Help.Render(m.filter)
-	return truncateToWidth(prompt+query, width)
+	left := prompt + query
+	return truncateToWidth(m.withCredit(left, width), width)
 }
 
 // renderRevealedBar is the footer shown after enter reveals a link: the URL
@@ -183,11 +416,13 @@ func (m Model) renderFilterBar(width int) string {
 func (m Model) renderRevealedBar(width int) string {
 	label := m.renderer.NewStyle().Foreground(colGreen).Render("copied ")
 	url := m.styles.Help.Render(m.revealed)
-	return truncateToWidth(label+url, width)
+	left := label + url
+	return truncateToWidth(m.withCredit(left, width), width)
 }
 
 // renderFooter is the frame's bottom line: the filter input while it is
-// open, the just-revealed URL after enter, the key-binding help otherwise.
+// open, the just-revealed URL after enter, the key-binding help otherwise —
+// each with the "bubbletea · lipgloss" credit right-aligned opposite it.
 // All three are always exactly one line, so which one is showing does not
 // change computeLayout's fixed height.
 func (m Model) renderFooter(width int) string {
@@ -197,7 +432,7 @@ func (m Model) renderFooter(width int) string {
 	if m.revealed != "" {
 		return m.renderRevealedBar(width)
 	}
-	return m.renderHelp()
+	return m.renderHelp(width)
 }
 
 // scrollWindow returns the index of the first row to show in a list of
@@ -223,11 +458,13 @@ func scrollWindow(idx, total, height int) int {
 	return start
 }
 
-// renderListPane renders the section list: one line per visible section,
-// marking the current selection, scrolled so the selection is always in the
-// visible window, plus one status line (ListStatus) pinned to the bottom of
-// the pane — mirroring the web build's ListPane, which keeps the selected
-// button in its scroll viewport and shows the same status line beneath it.
+// renderListPane renders the section list: a README-style header label
+// naming the active tab, one line per visible section, marking the current
+// selection with a filled background, scrolled so the selection is always
+// in the visible window, plus one status line (ListStatus) pinned to the
+// bottom of the pane — mirroring the web build's ListPane, which shows the
+// tab name above the rows and keeps the selected button in its scroll
+// viewport.
 func (m Model) renderListPane(outerW, outerH int, focused bool) string {
 	style := m.styles.PaneUnfocused
 	if focused {
@@ -239,7 +476,10 @@ func (m Model) renderListPane(outerW, outerH int, focused bool) string {
 
 	sections := m.visibleSections()
 
-	rowsH := styleH - 1 // one row reserved for the status line below
+	header := truncateToWidth(m.styles.ListHeader.Render(strings.ToUpper(m.currentTab())), textW)
+	rule := truncateToWidth(m.styles.Rule.Render(strings.Repeat("─", textW)), textW)
+
+	rowsH := styleH - 3 // header label, its rule, and the status line below
 	if rowsH < 0 {
 		rowsH = 0
 	}
@@ -257,19 +497,23 @@ func (m Model) renderListPane(outerW, outerH int, focused bool) string {
 		end = len(sections)
 	}
 
-	lines := make([]string, 0, end-start+1)
+	lines := []string{header, rule}
 	for _, s := range sections[start:end] {
-		marker := "  "
 		if s.ID == m.selected {
-			marker = "› "
+			line := truncateToWidth("› "+s.Label, textW)
+			lines = append(lines, m.styles.SelectedRow.Width(textW).Render(line))
+			continue
 		}
-		line := truncateToWidth(marker+s.Label, textW)
-		if s.ID == m.selected {
-			line = m.styles.List.Bold(true).Render(line)
-		} else {
-			line = m.styles.List.Render(line)
-		}
-		lines = append(lines, line)
+		line := truncateToWidth("  "+s.Label, textW)
+		lines = append(lines, m.styles.UnselectedRow.Render(line))
+	}
+
+	// Pad with blank rows so the status line lands pinned to the pane's
+	// bottom edge (mirroring ListPane.tsx's flex layout: header flex-none,
+	// rows flex-1, status flex-none) instead of sitting directly under
+	// whatever row happened to be last.
+	for len(lines) < rowsH+2 {
+		lines = append(lines, strings.Repeat(" ", textW))
 	}
 	lines = append(lines, truncateToWidth(m.styles.Help.Render(m.Status()), textW))
 
@@ -280,11 +524,11 @@ func (m Model) renderListPane(outerW, outerH int, focused bool) string {
 	return style.Width(styleW).Height(styleH).Render(strings.Join(lines, "\n"))
 }
 
-// renderDetailPane renders the starship-style prompt header and the
-// selected section's body inside the bubbles viewport, which owns
-// scrolling from Task 5 on. While the egg is showing, it replaces the
-// viewport's content entirely; any key dismisses it and returns to the
-// section that was on screen.
+// renderDetailPane renders the starship-style prompt header — on its own
+// background-filled bar — and the selected section's body inside the
+// bubbles viewport, which owns scrolling from Task 5 on. While the egg is
+// showing, it replaces the viewport's content entirely; any key dismisses
+// it and returns to the section that was on screen.
 func (m Model) renderDetailPane(outerW, outerH int, focused bool) string {
 	style := m.styles.PaneUnfocused
 	if focused {
@@ -292,12 +536,18 @@ func (m Model) renderDetailPane(outerW, outerH int, focused bool) string {
 	}
 	styleW := paneStyleDim(outerW)
 	styleH := paneStyleDim(outerH)
+	textW := paneTextWidth(outerW)
+
+	prompt := renderPrompt(m.renderer, m.selectedSection())
+	promptBar := m.styles.PromptBar.Width(textW).Render(truncateToWidth(prompt, textW))
 
 	body := m.viewport.View()
 	if m.egg {
 		body = renderEgg(m.renderer, m.styles)
 	}
-	return style.Width(styleW).Height(styleH).Render(body)
+
+	content := lipgloss.JoinVertical(lipgloss.Left, promptBar, body)
+	return style.Width(styleW).Height(styleH).Render(content)
 }
 
 // renderEgg renders the undocumented easter egg's line: "Catppuccin" in the
@@ -309,9 +559,58 @@ func renderEgg(r *lipgloss.Renderer, styles Styles) string {
 	return lead + accent + rest
 }
 
-// renderDetailBody builds the detail viewport's content: the prompt line,
-// then the section's kicker, paragraphs, rows, and links, each word-wrapped
-// to width rather than left to overflow the pane.
+// renderMetaRow renders one label/value row of the metadata table: a
+// lavender label column of fixed width beside a wrapped subtext1 value
+// column, mirroring DetailPane.tsx's 17ch/1fr grid.
+func renderMetaRow(r *lipgloss.Renderer, styles Styles, labelW, gapW, bodyW int, row site.Row) string {
+	label := styles.RowLabel.Width(labelW).Render(row.Label)
+	spacer := strings.Repeat(" ", gapW)
+	body := styles.RowBody.Width(bodyW).Render(row.Body)
+	return lipgloss.JoinHorizontal(lipgloss.Top, label, spacer, body)
+}
+
+// renderMetaTable renders the section's Rows as a two-column ruled table:
+// a top rule, then each row separated by a hairline, matching the web
+// build's border-top/border-b grid rather than plain "label: value" lines.
+func renderMetaTable(r *lipgloss.Renderer, styles Styles, rows []site.Row, width int) string {
+	if len(rows) == 0 || width <= 0 {
+		return ""
+	}
+	const gap = 2
+	labelW := width / 3
+	if labelW > 17 {
+		labelW = 17
+	}
+	if labelW < 4 {
+		labelW = 4
+	}
+	bodyW := width - labelW - gap
+	if bodyW < 1 {
+		bodyW = 1
+		labelW = width - gap - bodyW
+		if labelW < 0 {
+			labelW = 0
+		}
+	}
+
+	tableW := labelW + gap + bodyW
+	topRule := styles.Rule.Render(strings.Repeat("─", tableW))
+	hairline := styles.TableRule.Render(strings.Repeat("─", tableW))
+
+	var b strings.Builder
+	b.WriteString(topRule)
+	for _, row := range rows {
+		b.WriteString("\n")
+		b.WriteString(renderMetaRow(r, styles, labelW, gap, bodyW, row))
+		b.WriteString("\n")
+		b.WriteString(hairline)
+	}
+	return b.String()
+}
+
+// renderDetailBody builds the detail viewport's content: a large heading
+// (the section title, matching DetailPane.tsx's <h2>), the kicker,
+// paragraphs word-wrapped to width, then the metadata table and links.
 func renderDetailBody(r *lipgloss.Renderer, styles Styles, s site.Section, width int) string {
 	if width <= 0 {
 		return ""
@@ -319,8 +618,10 @@ func renderDetailBody(r *lipgloss.Renderer, styles Styles, s site.Section, width
 	wrap := r.NewStyle().Width(width)
 
 	var b strings.Builder
-	b.WriteString(renderPrompt(r, s))
-	b.WriteString("\n\n")
+	if s.Title != "" {
+		b.WriteString(styles.Title.Render(wrap.Render(s.Title)))
+		b.WriteString("\n")
+	}
 
 	if s.Kicker != "" {
 		b.WriteString(styles.TitleSub.Render(wrap.Render(s.Kicker)))
@@ -336,12 +637,7 @@ func renderDetailBody(r *lipgloss.Renderer, styles Styles, s site.Section, width
 
 	if len(s.Rows) > 0 {
 		b.WriteString("\n\n")
-		for i, r := range s.Rows {
-			b.WriteString(styles.Detail.Render(wrap.Render(r.Label + ": " + r.Body)))
-			if i != len(s.Rows)-1 {
-				b.WriteString("\n")
-			}
-		}
+		b.WriteString(renderMetaTable(r, styles, s.Rows, width))
 	}
 
 	if len(s.Links) > 0 {
@@ -353,6 +649,13 @@ func renderDetailBody(r *lipgloss.Renderer, styles Styles, s site.Section, width
 			}
 		}
 	}
+
+	// The web build closes the detail body with a small blinking caret
+	// (DetailPane.tsx's aria-hidden accent block). Terminals here don't
+	// blink it, but the filled accent block itself carries across as a
+	// two-cell background fill on its own trailing line.
+	b.WriteString("\n\n")
+	b.WriteString(r.NewStyle().Background(colAccent).Render("  "))
 
 	return b.String()
 }
@@ -376,7 +679,7 @@ func renderPrompt(r *lipgloss.Renderer, s site.Section) string {
 	return strings.Join(parts, " ")
 }
 
-// View composes the full frame: title block, tab bar, the list and detail
+// View composes the full frame: header row, tab bar, the list and detail
 // panes (side by side or stacked, per computeLayout), and the help footer.
 func (m Model) View() string {
 	lay := m.computeLayout()
@@ -386,7 +689,7 @@ func (m Model) View() string {
 		w = 80
 	}
 
-	title := m.renderTitle(w)
+	header := m.renderHeaderRow(w)
 	tabs := m.renderTabBar(w)
 	helpFooter := m.renderFooter(w)
 
@@ -400,7 +703,7 @@ func (m Model) View() string {
 		main = lipgloss.JoinHorizontal(lipgloss.Top, list, detail)
 	}
 
-	return lipgloss.JoinVertical(lipgloss.Left, title, tabs, main, helpFooter)
+	return lipgloss.JoinVertical(lipgloss.Left, header, tabs, main, helpFooter)
 }
 
 // truncateToWidth cuts s to fit within width display columns, appending an
@@ -413,6 +716,18 @@ func truncateToWidth(s string, width int) string {
 		return ""
 	}
 	return ansi.Truncate(s, width, "…")
+}
+
+// truncateBlockToWidth applies truncateToWidth to every line of a
+// (possibly multi-line, possibly bordered) block, so a block that spans
+// several rows — like the bordered tab chips — never widens the frame past
+// width even though it isn't a single line.
+func truncateBlockToWidth(s string, width int) string {
+	lines := splitLines(s)
+	for i, line := range lines {
+		lines[i] = truncateToWidth(line, width)
+	}
+	return strings.Join(lines, "\n")
 }
 
 // splitLines splits a rendered frame into its display lines.

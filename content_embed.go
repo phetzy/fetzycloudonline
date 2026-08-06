@@ -44,7 +44,15 @@ type Tab struct {
 	Label string `json:"label"`
 }
 
+// Header carries the copy shown in the header row that does not belong to
+// any one section. Today that is just the "builds" line beside the role and
+// status, which are section rows.
+type Header struct {
+	Builds string `json:"builds"`
+}
+
 type Content struct {
+	Header   Header    `json:"header"`
 	Tabs     []Tab     `json:"tabs"`
 	Sections []Section `json:"sections"`
 }

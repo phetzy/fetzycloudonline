@@ -93,3 +93,16 @@ func TestContactCarriesThreeLinks(t *testing.T) {
 		}
 	}
 }
+
+// TestHeaderBuildsIsPresent guards the one header string that belongs to no
+// section. It is rendered by both the web build (src/components/HeaderRow.tsx)
+// and the SSH build (internal/tui/view.go), and it used to be hardcoded
+// separately in each — which is exactly how the status line drifted out of
+// sync between them. An empty value here would silently render a bare
+// "builds " label in both, so fail loudly instead.
+func TestHeaderBuildsIsPresent(t *testing.T) {
+	c := MustLoad()
+	if c.Header.Builds == "" {
+		t.Fatal("content.json header.builds is empty; both builds render it")
+	}
+}

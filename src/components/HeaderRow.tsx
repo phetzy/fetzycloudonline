@@ -1,11 +1,11 @@
-import { SECTIONS } from '../content'
+import { HEADER, SECTIONS } from '../content'
 
-// Every string in this header except `builds` comes from content.json, which
-// is the single source of truth shared with the SSH build in cmd/fetzer.
-// These used to be hardcoded here, and drifted: the status line read
-// "open to interesting conversations" while content.json said
-// "Open to interesting conversations", so the web and SSH builds disagreed.
-// Deriving them is what stops that happening again.
+// Every string in this header comes from content.json, which is the single
+// source of truth shared with the SSH build in cmd/fetzer. These used to be
+// hardcoded here, and drifted: the status line read "open to interesting
+// conversations" while content.json said "Open to interesting
+// conversations", so the web and SSH builds disagreed. Deriving them is what
+// stops that happening again.
 const README = SECTIONS.find((s) => s.id === 'readme')!
 
 const row = (label: string): string => README.rows.find((r) => r.label === label)?.body ?? ''
@@ -37,11 +37,9 @@ export function HeaderRow() {
 					<span className="text-subtext0">status </span>
 					<span className="text-green">● {row('status')}</span>
 				</span>
-				{/* `builds` has no content.json field. It is deliberately literal here,
-				    and cmd/fetzer takes it verbatim from this file for the same reason. */}
 				<span>
-					<span className="text-subtext0">builds </span>map servers · CLI tools · self-hosted
-					platforms · hardware
+					<span className="text-subtext0">builds </span>
+					{HEADER.builds}
 				</span>
 			</div>
 		</div>

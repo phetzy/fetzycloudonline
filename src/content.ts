@@ -19,5 +19,10 @@ export type Section = {
 
 export type Tab = { id: TabId; label: string }
 
+// Copy shown in the header row that belongs to no single section — today
+// just the "builds" line beside role and status, which are readme rows.
+export type HeaderContent = { builds: string }
+
+export const HEADER: HeaderContent = data.header as HeaderContent
 export const SECTIONS: Section[] = data.sections as Section[]
 export const TABS: Tab[] = data.tabs as Tab[]

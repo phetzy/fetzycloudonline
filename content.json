@@ -1,4 +1,7 @@
 {
+	"header": {
+		"builds": "map servers · CLI tools · self-hosted platforms · hardware"
+	},
 	"tabs": [
 		{ "id": "readme", "label": "readme" },
 		{ "id": "projects", "label": "projects" },

@@ -244,18 +244,10 @@ func shortRole(role string) string {
 	return role
 }
 
-// buildsLine is the meta card's third line. It is not in content.json —
-// it is hardcoded, verbatim, in the web build's src/components/HeaderRow.tsx
-// (lines 21-22). Reproduced here character-for-character (including the
-// middot separators) because it is real, already-shipped site copy, not
-// invented text; see the report for why it lives here as a constant
-// instead of coming from content.json like everything else in this file.
-const buildsLine = "map servers · CLI tools · self-hosted platforms · hardware"
-
 // renderMetaCard renders the bordered role/status/builds box beside the
 // name card: "role" and "status" pulled from the readme section's own rows
 // in content.json, with a green status dot, plus the "builds" line from
-// HeaderRow.tsx (see buildsLine).
+// content.json's top-level header object.
 func (m Model) renderMetaCard(outerW int) string {
 	id := m.identitySection()
 	role := shortRole(rowByLabel(id, "role"))
@@ -268,7 +260,7 @@ func (m Model) renderMetaCard(outerW int) string {
 	dot := m.renderer.NewStyle().Foreground(colGreen).Render("● ")
 	statusLine := m.styles.TitleSub.Render("status ") + dot +
 		m.renderer.NewStyle().Foreground(colGreen).Render(status)
-	buildsLineRendered := m.styles.TitleSub.Render("builds ") + m.styles.Detail.Render(buildsLine)
+	buildsLineRendered := m.styles.TitleSub.Render("builds ") + m.styles.Detail.Render(m.content.Header.Builds)
 
 	lines := []string{
 		truncateToWidth(roleLine, textW),
@@ -314,7 +306,7 @@ func (m Model) renderHeaderRow(width, height int) string {
 	if w := lipgloss.Width("status ● " + status); w > metaContentW {
 		metaContentW = w
 	}
-	if w := lipgloss.Width("builds " + buildsLine); w > metaContentW {
+	if w := lipgloss.Width("builds " + m.content.Header.Builds); w > metaContentW {
 		metaContentW = w
 	}
 	metaOuterW := metaContentW + cardPaddingOverhead + paneBorderOverhead
@@ -369,7 +361,7 @@ func (m Model) renderCompactHeader(width int) string {
 // instead of two stacked ones. It drops one card's border (four rows: two
 // border lines plus the blank line JoinVertical would otherwise need to
 // separate the cards) while keeping every string content.json (or
-// buildsLine) provides, unlike renderCompactHeader's width-driven fallback
+// content.json header) provides, unlike renderCompactHeader's width-driven fallback
 // below, which does drop content.
 func (m Model) renderCompactCardHeader(width int) string {
 	id := m.identitySection()
@@ -383,7 +375,7 @@ func (m Model) renderCompactCardHeader(width int) string {
 	dot := m.renderer.NewStyle().Foreground(colGreen).Render("● ")
 	statusLine := m.styles.TitleSub.Render("status ") + dot +
 		m.renderer.NewStyle().Foreground(colGreen).Render(status)
-	buildsLineRendered := m.styles.TitleSub.Render("builds ") + m.styles.Detail.Render(buildsLine)
+	buildsLineRendered := m.styles.TitleSub.Render("builds ") + m.styles.Detail.Render(m.content.Header.Builds)
 
 	lines := []string{
 		truncateToWidth(m.identityLine(), textW),

@@ -33,3 +33,7 @@ vite.config.ts.timestamp-*
 *.tfstate
 *.tfstate.*
 *.tfplan
+
+# Saved plan files contain account IDs and resolved ARNs.
+tfplan
+*.tfplan

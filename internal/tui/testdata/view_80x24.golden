@@ -1,8 +1,5 @@
 ╭──────────────────────────────────────────────────────────────────────────────╮
-│  D A V I D    F E T Z E R                                                    │
-│  software engineer · boise, id · remote                                      │
-╰──────────────────────────────────────────────────────────────────────────────╯
-╭──────────────────────────────────────────────────────────────────────────────╮
+│  DAVID FETZER · software engineer · boise, id · remote                       │
 │  role Software Engineer at C1                                                │
 │  status ● Open to interesting conversations                                  │
 │  builds map servers · CLI tools · self-hosted platforms · hardware           │
@@ -19,6 +16,9 @@
 │                        ││ tools, self-hosted platforms, and the hardware     │
 │                        ││ underneath them.                                   │
 │                        ││                                                    │
-│ 1/1                    ││ Four independent projects carry this page: a self- │
+│                        ││ Four independent projects carry this page: a self- │
+│                        ││ hosted map server sold as a Mapbox alternative, a  │
+│                        ││ static Go binary for browserless file transfer, a  │
+│ 1/1                    ││ private LLM and RAG platform on Kubernetes, and a  │
 ╰────────────────────────╯╰────────────────────────────────────────────────────╯
 ↑/↓ j/k select • h/l ←/→ pane • tab next tab • / filter • g/G first/last …      

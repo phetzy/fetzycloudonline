@@ -16,6 +16,18 @@ const listPaneWidth = 26
 // by side. Below it they stack vertically.
 const wideThreshold = 70
 
+// tallThreshold is the shortest terminal height at which the header renders
+// as the full two-card form (renderNameCard + renderMetaCard, side by side
+// or stacked per wideThreshold). Below it — the visitor's terminal has few
+// rows to spare — the header switches to renderCompactCardHeader: the same
+// content merged into a single card, trading the second card's border for
+// two more rows handed back to the detail pane. 30 is comfortably above the
+// 80x24 minimum this project supports while leaving ample headroom below
+// any terminal worth calling "generous" (the 140x40 fixture the header's
+// full form must keep matching exactly); it is compared against
+// Model.height on every render, never assumed.
+const tallThreshold = 30
+
 // The pane styles (see styles.go) are Border(RoundedBorder()).Padding(0, 1):
 // one column of border on each side, one column of padding on each side,
 // and no vertical padding.
@@ -106,7 +118,7 @@ func (m Model) computeLayout() frameLayout {
 		h = 24
 	}
 
-	fixed := lipgloss.Height(m.renderHeaderRow(w)) +
+	fixed := lipgloss.Height(m.renderHeaderRow(w, h)) +
 		lipgloss.Height(m.renderTabBar(w)) +
 		lipgloss.Height(m.renderFooter(w))
 	mainH := h - fixed
@@ -271,15 +283,22 @@ func (m Model) renderMetaCard(outerW int) string {
 // there is room, or stacked full-width when there is not. Below
 // wideThreshold — the same column count at which the list and detail panes
 // themselves give up sitting side by side — there simply is not enough
-// vertical room left for two bordered, multi-line cards on top of stacked
-// panes, so the header collapses to the single compact identity line the
-// TUI always had: trading the bordered chrome for the space stacking the
-// panes already gives up. The decision is derived from the current
-// terminal width, never a constant tied to a specific terminal size.
-func (m Model) renderHeaderRow(width int) string {
+// horizontal room for two bordered, multi-line cards, so the header
+// collapses to the single compact identity line the TUI always had. Below
+// tallThreshold — plenty of columns, but few rows — the two cards would
+// still fit sideways but cost too many of the visitor's scarce rows when
+// stacked, so they merge into the single bordered card
+// renderCompactCardHeader renders, which keeps every line of content but
+// drops the second border. Both decisions are derived from the model's
+// current width and height, never a constant tied to a specific terminal
+// size.
+func (m Model) renderHeaderRow(width, height int) string {
 	id := m.identitySection()
 	if width < wideThreshold {
 		return m.renderCompactHeader(width)
+	}
+	if height < tallThreshold {
+		return m.renderCompactCardHeader(width)
 	}
 	title := strings.ToUpper(id.Title)
 
@@ -318,16 +337,62 @@ func (m Model) renderHeaderRow(width int) string {
 	return lipgloss.JoinVertical(lipgloss.Left, name, meta)
 }
 
-// renderCompactHeader is the header row shown below wideThreshold: the
-// identity line the TUI always had, no bordered cards. Both strings are
-// content.json's Title and Kicker for the readme section.
-func (m Model) renderCompactHeader(width int) string {
+// identityLine renders the title/kicker identity line shared by
+// renderCompactHeader and renderCompactCardHeader: the title in Title style,
+// then, if present, the kicker in TitleSub style after a " · " separator.
+// Unstyled truncation is left to the caller, since the two callers truncate
+// to different widths (the bare terminal width vs. a card's inset text
+// width).
+func (m Model) identityLine() string {
 	id := m.identitySection()
 	line := m.styles.Title.Render(strings.ToUpper(id.Title))
 	if id.Kicker != "" {
 		line += m.styles.TitleSub.Render(" · " + id.Kicker)
 	}
-	return truncateToWidth(line, width)
+	return line
+}
+
+// renderCompactHeader is the header row shown below wideThreshold: the
+// identity line the TUI always had, no bordered cards. Both strings are
+// content.json's Title and Kicker for the readme section. This is the one
+// tier that drops content rather than just chrome: the role/status/builds
+// lines the other tiers carry are absent here, because below wideThreshold
+// there is no longer room to lay them out legibly without truncating
+// mid-word — see the report for the exact width math.
+func (m Model) renderCompactHeader(width int) string {
+	return truncateToWidth(m.identityLine(), width)
+}
+
+// renderCompactCardHeader is the header row shown at wideThreshold or wider
+// but below tallThreshold: every line the full name/meta cards carry —
+// title, kicker, role, status, builds — merged into a single bordered card
+// instead of two stacked ones. It drops one card's border (four rows: two
+// border lines plus the blank line JoinVertical would otherwise need to
+// separate the cards) while keeping every string content.json (or
+// buildsLine) provides, unlike renderCompactHeader's width-driven fallback
+// below, which does drop content.
+func (m Model) renderCompactCardHeader(width int) string {
+	id := m.identitySection()
+	role := shortRole(rowByLabel(id, "role"))
+	status := rowByLabel(id, "status")
+
+	textW := cardTextWidth(width)
+	styleW := cardStyleDim(width)
+
+	roleLine := m.styles.TitleSub.Render("role ") + m.styles.Detail.Render(role)
+	dot := m.renderer.NewStyle().Foreground(colGreen).Render("● ")
+	statusLine := m.styles.TitleSub.Render("status ") + dot +
+		m.renderer.NewStyle().Foreground(colGreen).Render(status)
+	buildsLineRendered := m.styles.TitleSub.Render("builds ") + m.styles.Detail.Render(buildsLine)
+
+	lines := []string{
+		truncateToWidth(m.identityLine(), textW),
+		truncateToWidth(roleLine, textW),
+		truncateToWidth(statusLine, textW),
+		truncateToWidth(buildsLineRendered, textW),
+	}
+
+	return m.styles.NameCard.Width(styleW).Render(strings.Join(lines, "\n"))
 }
 
 // renderTabBar renders one bordered chip per entry in content.Tabs, marking
@@ -688,8 +753,12 @@ func (m Model) View() string {
 	if w <= 0 {
 		w = 80
 	}
+	h := m.height
+	if h <= 0 {
+		h = 24
+	}
 
-	header := m.renderHeaderRow(w)
+	header := m.renderHeaderRow(w, h)
 	tabs := m.renderTabBar(w)
 	helpFooter := m.renderFooter(w)
 

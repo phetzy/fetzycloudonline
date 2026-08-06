@@ -1,0 +1,227 @@
+name: deploy-ssh
+
+# Deploys the Go SSH TUI (cmd/fetzer) to the single EC2 instance running it.
+#
+# This workflow can only ever run as a push to `main`: the deploy role's
+# OIDC trust policy is scoped with StringEquals to
+# repo:phetzy/fetzycloudonline:ref:refs/heads/main, so any other sub claim
+# (a pull_request build, a different branch, a fork) is refused at
+# sts:AssumeRoleWithWebIdentity. workflow_dispatch on the main branch emits
+# that same sub claim, so it is accepted; a pull_request trigger would not
+# be, and must not be added here.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'cmd/**'
+      - 'internal/**'
+      - '*.go' # root-level Go files, e.g. content_embed.go — '*' does not cross '/' in Actions path filters, so this is root-only and does not duplicate cmd/** or internal/**
+      - 'content.json'
+      - 'go.mod'
+      - 'go.sum'
+      - '.github/workflows/deploy-ssh.yml'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  id-token: write # required for OIDC; nothing else needs elevating
+
+# Two overlapping pushes to main must not race each other's deploy onto the
+# same instance. Do not cancel-in-progress: a run that's already inside
+# update-fetzer.sh's swap-and-restart must be allowed to finish (and roll
+# back on failure) rather than being killed mid-deploy.
+concurrency:
+  group: deploy-ssh
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check required configuration
+        # DEPLOY_ROLE_ARN and ARTIFACT_BUCKET are secrets, not vars: the
+        # bucket name embeds the account ID directly
+        # (<project>-ssh-tui-artifacts-<account-id>, terraform/storage.tf)
+        # and the role ARN embeds it too. GitHub only masks secrets in logs,
+        # never vars, and this repo's Actions logs are public. This guard
+        # only ever names which of the four is missing — it must never echo
+        # a value, secret or not, since a var's value ends up in the log
+        # regardless of what it is.
+        env:
+          DEPLOY_ROLE_ARN: ${{ secrets.DEPLOY_ROLE_ARN }}
+          ARTIFACT_BUCKET: ${{ secrets.ARTIFACT_BUCKET }}
+          INSTANCE_ID: ${{ vars.INSTANCE_ID }}
+          AWS_REGION: ${{ vars.AWS_REGION }}
+        run: |
+          missing=()
+          [ -z "$DEPLOY_ROLE_ARN" ] && missing+=(DEPLOY_ROLE_ARN)
+          [ -z "$ARTIFACT_BUCKET" ] && missing+=(ARTIFACT_BUCKET)
+          [ -z "$INSTANCE_ID" ] && missing+=(INSTANCE_ID)
+          [ -z "$AWS_REGION" ] && missing+=(AWS_REGION)
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "::error::Missing required configuration: ${missing[*]}. See terraform/README.md." >&2
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      - name: Test
+        # Deliberately before credentials are minted: a broken build or a
+        # failing test must never reach the point where this job holds
+        # AWS credentials at all.
+        run: go test ./...
+
+      - name: Build (linux/arm64, matches the Graviton instance)
+        env:
+          CGO_ENABLED: '0'
+          GOOS: linux
+          GOARCH: arm64
+        run: go build -trimpath -o fetzer ./cmd/fetzer
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
+        with:
+          role-to-assume: ${{ secrets.DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          # Belt-and-suspenders alongside DEPLOY_ROLE_ARN being a secret:
+          # this masks the bare account ID (as returned by STS) anywhere
+          # else it might get logged, not just the exact ARN string.
+          mask-aws-account-id: true
+
+      - name: Upload binary
+        # update-fetzer.sh (terraform/files/update-fetzer.sh) only ever reads
+        # the "current" key — that is the one the instance pulls on deploy.
+        # "builds/<sha>" is kept alongside it, indefinitely, purely so a
+        # human (or a future rollback command) can point "current" back at
+        # an older build. Both keys must stay in sync: change one side of
+        # this step without the other and the instance keeps pulling
+        # whatever "current" last pointed at while "builds/" silently drifts
+        # out of sync with it.
+        #
+        # Two separate `aws s3 cp` calls from the runner's local file, not a
+        # server-side `aws s3 cp` from builds/<sha> to current: an S3-to-S3
+        # copy needs s3:GetObject on the deploy role, and that role
+        # deliberately holds only s3:PutObject (terraform/iam.tf). Do not
+        # "optimize" this into a copy — it will fail with AccessDenied.
+        #
+        # Both must succeed before the SSM step runs. If the "current" put
+        # fails after "builds/<sha>" succeeded, the workflow must not
+        # proceed to deploy: the instance would pull a stale "current" while
+        # the job reports on a build that isn't actually live.
+        env:
+          ARTIFACT_BUCKET: ${{ secrets.ARTIFACT_BUCKET }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          aws s3 cp fetzer "s3://$ARTIFACT_BUCKET/builds/$COMMIT_SHA"
+          aws s3 cp fetzer "s3://$ARTIFACT_BUCKET/current"
+
+      - name: Deploy via SSM
+        id: deploy
+        # ssm:SendCommand only grants this role AWS-RunShellScript on the one
+        # instance ARN baked into the deploy role's policy (terraform/iam.tf);
+        # the role has no ec2:DescribeInstances or
+        # ssm:DescribeInstanceInformation, so the instance ID cannot be
+        # looked up here and must come from the INSTANCE_ID repository
+        # variable instead.
+        #
+        # --timeout-seconds 330 matches SSM's delivery window to how long
+        # this job is willing to wait (the poll step below gives up after 60
+        # attempts * 5s sleep = ~300s, plus per-call latency). SSM's own
+        # default is 3600s: without this, an instance that's unreachable at
+        # dispatch time leaves the command queued and able to execute up to
+        # an hour later, deploying "current" onto the instance well after
+        # the job already reported a red failure.
+        env:
+          INSTANCE_ID: ${{ vars.INSTANCE_ID }}
+        run: |
+          command_id=$(aws ssm send-command \
+            --instance-ids "$INSTANCE_ID" \
+            --document-name "AWS-RunShellScript" \
+            --parameters 'commands=["/usr/local/bin/update-fetzer.sh"]' \
+            --timeout-seconds 330 \
+            --query "Command.CommandId" \
+            --output text)
+          echo "command_id=$command_id" >> "$GITHUB_OUTPUT"
+          echo "Dispatched SSM command $command_id"
+
+      - name: Wait for deploy to finish
+        id: wait
+        # send-command returns as soon as the command is accepted by the SSM
+        # service, not when it finishes running on the instance.
+        # update-fetzer.sh sleeps 3s before its health check and then
+        # restarts a systemd unit, so the real result is only known well
+        # after send-command has already returned. Poll
+        # get-command-invocation until it reaches a terminal status.
+        env:
+          INSTANCE_ID: ${{ vars.INSTANCE_ID }}
+          COMMAND_ID: ${{ steps.deploy.outputs.command_id }}
+        run: |
+          set -uo pipefail
+
+          terminal_statuses="Success Failed Cancelled TimedOut Cancelling"
+          status="Pending"
+          invocation=""
+          last_error=""
+          err_file=$(mktemp)
+          trap 'rm -f "$err_file"' EXIT
+
+          for _ in $(seq 1 60); do
+            # get-command-invocation legitimately returns
+            # InvocationDoesNotExist for a second or two right after
+            # send-command, before SSM has propagated the command to the
+            # instance — that transient error is expected and must not fail
+            # the loop. Its stderr is captured (not discarded) so that if
+            # the loop exhausts without ever seeing a result, the *last*
+            # error is still visible instead of five silent minutes ending
+            # in an unexplained timeout.
+            # GitHub runs `run:` blocks as `bash -e {0}`; `set -uo pipefail`
+            # above adds options but does not clear the inherited `-e`. Under
+            # `-e`, an assignment from a failed command substitution exits
+            # the shell immediately — without the `|| attempt=""` below, the
+            # very first InvocationDoesNotExist (expected, see comment above)
+            # would kill the step before the loop's own retry logic ever ran.
+            attempt=$(aws ssm get-command-invocation \
+              --command-id "$COMMAND_ID" \
+              --instance-id "$INSTANCE_ID" \
+              --output json 2>"$err_file") || attempt=""
+
+            if [ -n "$attempt" ]; then
+              invocation="$attempt"
+              status=$(echo "$invocation" | jq -r '.Status')
+              case " $terminal_statuses " in
+                *" $status "*) break ;;
+              esac
+            else
+              last_error=$(cat "$err_file")
+            fi
+
+            sleep 5
+          done
+
+          echo "Final status: $status"
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+
+          if [ -n "$invocation" ]; then
+            echo "--- stdout ---"
+            echo "$invocation" | jq -r '.StandardOutputContent'
+            echo "--- stderr ---"
+            echo "$invocation" | jq -r '.StandardErrorContent'
+          else
+            echo "::warning::Never received a command invocation result from SSM before timing out."
+            if [ -n "$last_error" ]; then
+              echo "Last error from aws ssm get-command-invocation:" >&2
+              echo "$last_error" >&2
+            fi
+          fi
+
+          if [ "$status" != "Success" ]; then
+            echo "::error::Deploy command finished with status $status" >&2
+            exit 1
+          fi

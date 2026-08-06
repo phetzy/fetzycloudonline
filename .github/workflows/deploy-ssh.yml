@@ -75,11 +75,28 @@ jobs:
           aws-region: ${{ vars.AWS_REGION }}
 
       - name: Upload binary
-        # update-fetzer.sh (terraform/files/update-fetzer.sh) hardcodes the
-        # object key "fetzer" at the bucket root — no prefix, no version
-        # suffix. Anything else here is a silent no-op deploy: the instance
-        # keeps pulling the last binary that landed at that exact key.
-        run: aws s3 cp fetzer "s3://${{ vars.ARTIFACT_BUCKET }}/fetzer"
+        # update-fetzer.sh (terraform/files/update-fetzer.sh) only ever reads
+        # the "current" key — that is the one the instance pulls on deploy.
+        # "builds/<sha>" is kept alongside it, indefinitely, purely so a
+        # human (or a future rollback command) can point "current" back at
+        # an older build. Both keys must stay in sync: change one side of
+        # this step without the other and the instance keeps pulling
+        # whatever "current" last pointed at while "builds/" silently drifts
+        # out of sync with it.
+        #
+        # Two separate `aws s3 cp` calls from the runner's local file, not a
+        # server-side `aws s3 cp` from builds/<sha> to current: an S3-to-S3
+        # copy needs s3:GetObject on the deploy role, and that role
+        # deliberately holds only s3:PutObject (terraform/iam.tf). Do not
+        # "optimize" this into a copy — it will fail with AccessDenied.
+        #
+        # Both must succeed before the SSM step runs. If the "current" put
+        # fails after "builds/<sha>" succeeded, the workflow must not
+        # proceed to deploy: the instance would pull a stale "current" while
+        # the job reports on a build that isn't actually live.
+        run: |
+          aws s3 cp fetzer "s3://${{ vars.ARTIFACT_BUCKET }}/builds/${{ github.sha }}"
+          aws s3 cp fetzer "s3://${{ vars.ARTIFACT_BUCKET }}/current"
 
       - name: Deploy via SSM
         id: deploy

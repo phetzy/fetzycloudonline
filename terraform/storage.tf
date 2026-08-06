@@ -48,6 +48,25 @@ resource "aws_s3_bucket_lifecycle_configuration" "artifacts" {
       noncurrent_days = 30
     }
   }
+
+  # The deploy role holds s3:PutObject but not s3:AbortMultipartUpload
+  # (iam.tf), and the built arm64 binary (measured at 9,167,370 bytes) is
+  # above the AWS CLI's 8MB multipart threshold, so `aws s3 cp` uses
+  # multipart on every normal deploy, not just some exotic upload path. A
+  # deploy killed mid-upload (a cancelled workflow run, a runner timeout)
+  # leaves the incomplete parts behind, billing indefinitely with nothing to
+  # clean them up. This lifecycle rule is the fix instead of widening the
+  # deploy role's IAM permissions.
+  rule {
+    id     = "abort-incomplete-multipart-uploads"
+    status = "Enabled"
+
+    filter {}
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
+    }
+  }
 }
 
 # Deny any request to the bucket that isn't over TLS. The public access

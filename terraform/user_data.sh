@@ -93,12 +93,34 @@ placeholder="placeholder-replaced-on-first-boot"
 fetch_err_file=$(mktemp)
 fetched_value=""
 fetch_status=0
-fetched_value=$(aws ssm get-parameter \
-  --region "$region" \
-  --name "$host_key_parameter" \
-  --with-decryption \
-  --query 'Parameter.Value' \
-  --output text 2>"$fetch_err_file") || fetch_status=$?
+
+# Terraform's depends_on (compute.tf) makes the instance role's inline
+# policy and its AmazonSSMManagedInstanceCore attachment exist in state
+# before the instance launches, but IAM's own propagation is eventually
+# consistent — depends_on cannot make an IAM permission effective the
+# instant it's created, only guarantee the API call to create it returned
+# first. A handful of retries a couple of seconds apart absorbs that
+# propagation window; the hard-abort below still fires if it never clears.
+fetch_attempts=5
+for attempt_num in $(seq 1 "$fetch_attempts"); do
+  fetch_status=0
+  fetched_value=$(aws ssm get-parameter \
+    --region "$region" \
+    --name "$host_key_parameter" \
+    --with-decryption \
+    --query 'Parameter.Value' \
+    --output text 2>"$fetch_err_file") || fetch_status=$?
+
+  if [ "$fetch_status" -eq 0 ] || grep -q "ParameterNotFound" "$fetch_err_file"; then
+    break
+  fi
+
+  if [ "$attempt_num" -lt "$fetch_attempts" ]; then
+    echo "aws ssm get-parameter failed (attempt $attempt_num/$fetch_attempts), retrying in 3s:"
+    cat "$fetch_err_file"
+    sleep 3
+  fi
+done
 
 # Distinguish "the parameter is genuinely missing" from every other failure.
 # The parameter is created before the instance ever boots (Task 3), so
@@ -108,9 +130,10 @@ fetched_value=$(aws ssm get-parameter \
 # blip reaching the SSM endpoint, an IAM problem) must NOT fall through to
 # key generation: doing so would silently overwrite a real host key on a
 # transient error and rotate the fingerprint under every returning visitor.
-# Those failures abort the boot instead.
+# Those failures abort the boot instead, after the retries above have had a
+# chance to absorb IAM's eventual consistency.
 if [ "$fetch_status" -ne 0 ] && ! grep -q "ParameterNotFound" "$fetch_err_file"; then
-  echo "fatal: aws ssm get-parameter failed for a reason other than ParameterNotFound:"
+  echo "fatal: aws ssm get-parameter failed for a reason other than ParameterNotFound after $fetch_attempts attempts:"
   cat "$fetch_err_file"
   rm -f "$fetch_err_file"
   exit 1

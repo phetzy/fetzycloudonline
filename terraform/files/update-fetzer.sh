@@ -56,7 +56,12 @@ cleanup() {
 }
 trap cleanup EXIT
 
-echo "update-fetzer: pulling s3://${ARTIFACT_BUCKET}/${s3_key} (region $AWS_REGION)"
+# The bucket name is not echoed here, even though it's masked twice over
+# already (tofu output sensitive = true, GitHub secret masking) — both of
+# those depend on the owner having pasted it in correctly, and dropping it
+# from this one line removes that dependency at zero cost. The object key
+# alone is enough to know what's happening.
+echo "update-fetzer: pulling s3://<bucket>/${s3_key} (region $AWS_REGION)"
 if ! aws s3 cp "s3://${ARTIFACT_BUCKET}/${s3_key}" "$tmp_bin" --region "$AWS_REGION"; then
   echo "update-fetzer: failed to pull binary from S3 (no build published yet, or a transient error); leaving the running binary alone" >&2
   exit 1

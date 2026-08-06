@@ -43,6 +43,19 @@ re-init — a new machine, a deleted `.terraform/` directory — repeat the
 `-backend-config` flag; there's no other way to supply the bucket name
 without committing it.
 
+One prerequisite this config assumes rather than creates: an IAM OIDC
+identity provider for `token.actions.githubusercontent.com` must already
+exist in the account. `iam.tf` reads it with a data source
+(`data.aws_iam_openid_connect_provider.github`) rather than creating one,
+because this account already had one from earlier work, and a second
+`aws_iam_openid_connect_provider` for the same URL fails with
+`EntityAlreadyExists`. In this account that's a non-issue. In a fresh
+account with no prior GitHub Actions OIDC setup, the very first `tofu apply`
+fails at plan time with something like "no matching
+IAM OpenID Connect provider found" — create the provider first (AWS
+Console → IAM → Identity providers → Add provider, or
+`aws iam create-open-id-connect-provider`) and then apply.
+
 ## `tofu apply` is never a safe no-op
 
 The AMI is resolved from `/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64`
@@ -112,24 +125,51 @@ instances in the account. The consequence is that the workflow has no way to
 look the instance ID up itself; it has to arrive out-of-band, as this
 variable. Without it, the deploy workflow's SSM step cannot run at all.
 
-## DNS — unresolved, stated plainly
+## DNS: `ssh.fetzycloud.online` via Cloudflare
 
-`ssh fetzycloud.online` will **not** work after this apply. The site's apex
-`A` record points at Vercel; this config creates an Elastic IP with nothing
-pointed at it. Until DNS is changed, the only way to reach the TUI is the
-bare IP from `tofu output public_ip` (or `tofu output connect_command` for
-the full command with the port filled in).
+`fetzycloud.online` is on Cloudflare, with the apex `A` record pointed at
+the Vercel-hosted website. This is decided, not deferred: add a subdomain,
+not touch the apex.
 
-Two ways to fix this, neither applied by this config:
+In the Cloudflare dashboard, DNS → Records → Add record:
 
-- Add a subdomain, e.g. `ssh.fetzycloud.online`, as an `A` record pointed at
-  the Elastic IP. Low friction, leaves the apex and the website alone.
-- Move the apex itself to point at this instance instead of Vercel — a much
-  bigger decision (it would take the website off Vercel, or require
-  something in front of both), and not one this config makes for you.
+- Type `A`
+- Name `ssh`
+- IPv4 address: the `public_ip` output (`tofu output -raw public_ip` or
+  `tofu output public_ip` — it isn't sensitive)
+- **Proxy status: DNS only (grey cloud), not Proxied (orange cloud).**
 
-This is deliberately left as an owner decision. Nothing here assumes an
-outcome either way.
+That last point is the one to get right. The natural instinct is to flip
+every Cloudflare record to the orange cloud, but Cloudflare's proxy only
+understands HTTP/HTTPS; routing arbitrary TCP like SSH through it requires
+Spectrum, a separate paid product, and this record doesn't have it enabled.
+A proxied record here doesn't degrade — it stops port `<ssh_port>` from
+answering on that hostname at all. Grey cloud only.
+
+The apex and `www` records are untouched by this — they keep resolving to
+Vercel exactly as before, so the website is never at risk from this change.
+
+Verify once the record has propagated:
+
+```bash
+dig +short ssh.fetzycloud.online
+ssh ssh.fetzycloud.online
+```
+
+There is deliberately no `AAAA` record alongside it. The security group
+(`network.tf`) accepts inbound SSH from `::/0` as well as `0.0.0.0/0`, but
+the instance runs in the account's default VPC, which has no IPv6 CIDR
+block associated — the instance never gets an IPv6 address to publish, so
+the `::/0` rule is currently unreachable rather than wrong.
+
+Worth stating honestly: a grey-cloud record publishes the Elastic IP as the
+DNS answer, in the clear, to anyone who looks — Cloudflare's proxy is what
+normally hides an origin IP, and this record doesn't use it. That's an
+acceptable trade here specifically because this is a deliberately public,
+unauthenticated listener; the IP is not a secret this config is trying to
+protect (`tofu output public_ip` already hands it out), and hiding it
+behind a proxy would only be theater for a service anyone can already
+connect to by design.
 
 ## First apply: what to expect, not a failure
 
@@ -143,6 +183,19 @@ run yet on a brand-new instance. Port `<ssh_port>` (default 22) is closed
 until the first successful deploy from the GitHub Actions workflow installs
 a binary and starts the unit. `ssh`-ing to the Elastic IP before that first
 deploy will simply be refused; that's expected, not a misconfiguration.
+
+That first deploy does not happen on its own. The workflow's `paths:`
+filter (`.github/workflows/deploy-ssh.yml`) only fires on changes to the Go
+source, `content.json`, `go.mod`/`go.sum`, or the workflow file itself, so a
+Terraform-only or README-only commit — which is all a fresh apply typically
+follows — will never trigger it, and there's nothing else to push right
+after `tofu apply` finishes. Once the four repository secrets/variables
+above are set, go to the repository's Actions tab, select the `deploy-ssh`
+workflow, and run it manually on `main` via **Run workflow**
+(`workflow_dispatch`, already wired into the `on:` block). That trigger is
+accepted by the OIDC trust policy the same way a push to `main` is — both
+produce the `repo:<owner>/<name>:ref:refs/heads/main` `sub` claim the trust
+policy checks — so a manual run authenticates exactly like a normal deploy.
 
 **The host key survives instance replacement; the diagnostic trail does
 not.** The SSH host key is stored as an SSM `SecureString` parameter

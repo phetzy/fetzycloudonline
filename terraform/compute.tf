@@ -17,13 +17,15 @@ locals {
     rate_per_min     = var.rate_per_min
   })
 
-  # user_data.sh rendered at ~16,166 bytes is 218 bytes under EC2's hard
-  # 16,384-byte user_data limit — close enough that any small change could
-  # tip it over and fail RunInstances outright. base64gzip() below is what
-  # actually protects against that (cloud-init decompresses gzip user data
-  # transparently, and the gzipped form is roughly a third of the size), but
-  # rendering it as its own local first keeps that reasoning next to the
-  # value it applies to.
+  # user_data.sh rendered with real defaults now measures over 17,600
+  # characters — already past EC2's hard 16,384-byte user_data limit on its
+  # own, before any encoding. base64gzip() below is not headroom, it is
+  # required: cloud-init decompresses gzip user data transparently, and the
+  # gzipped+base64 form measures under 8,800 characters, comfortably inside
+  # the limit. Re-measure with a disposable scratch templatefile() render
+  # (no backend, no AWS) before adding anything further to user_data.sh or
+  # its two spliced-in files — the margin on the gzipped form is generous
+  # today but is not unlimited.
   user_data_rendered = templatefile("${path.module}/user_data.sh", {
     region             = var.region
     artifact_bucket    = aws_s3_bucket.artifacts.id
@@ -38,6 +40,18 @@ resource "aws_instance" "fetzer" {
   instance_type          = var.instance_type
   iam_instance_profile   = aws_iam_instance_profile.fetzer.name
   vpc_security_group_ids = [aws_security_group.ssh_tui.id]
+
+  # The instance profile depends on aws_iam_role.instance existing, but
+  # nothing otherwise ties the instance to aws_iam_role_policy.instance (the
+  # inline permissions) or the AmazonSSMManagedInstanceCore attachment —
+  # both just hang off the role. Without this, Terraform is free to launch
+  # the instance before either policy is actually effective. If that
+  # happens, user_data.sh's `aws ssm get-parameter` for the host key comes
+  # back AccessDenied rather than ParameterNotFound, which trips the
+  # script's deliberate hard-abort path (see user_data.sh step 4) and the
+  # bootstrap dies permanently — no host key, no env file, no unit. Do not
+  # remove this as "redundant with the instance profile" — it isn't.
+  depends_on = [aws_iam_role_policy.instance, aws_iam_role_policy_attachment.instance_ssm_core]
 
   tags = {
     Name = "${var.project}-ssh-tui"

@@ -171,7 +171,7 @@ func (m Model) renderHelp() string {
 // renderFilterBar is the footer shown while the filter input is open,
 // mirroring the design reference's "filter> " prompt and live query.
 func (m Model) renderFilterBar(width int) string {
-	prompt := lipgloss.NewStyle().Foreground(colGreen).Render("filter> ")
+	prompt := m.renderer.NewStyle().Foreground(colGreen).Render("filter> ")
 	query := m.styles.Help.Render(m.filter)
 	return truncateToWidth(prompt+query, width)
 }
@@ -181,7 +181,7 @@ func (m Model) renderFilterBar(width int) string {
 // universal, this is what always works — the copy is a bonus, not the only
 // way the visitor sees the address.
 func (m Model) renderRevealedBar(width int) string {
-	label := lipgloss.NewStyle().Foreground(colGreen).Render("copied ")
+	label := m.renderer.NewStyle().Foreground(colGreen).Render("copied ")
 	url := m.styles.Help.Render(m.revealed)
 	return truncateToWidth(label+url, width)
 }
@@ -295,15 +295,15 @@ func (m Model) renderDetailPane(outerW, outerH int, focused bool) string {
 
 	body := m.viewport.View()
 	if m.egg {
-		body = renderEgg(m.styles)
+		body = renderEgg(m.renderer, m.styles)
 	}
 	return style.Width(styleW).Height(styleH).Render(body)
 }
 
 // renderEgg renders the undocumented easter egg's line: "Catppuccin" in the
 // accent colour, italic, the rest in subtext0.
-func renderEgg(styles Styles) string {
-	accent := lipgloss.NewStyle().Foreground(colAccent).Italic(true).Render("Catppuccin")
+func renderEgg(r *lipgloss.Renderer, styles Styles) string {
+	accent := r.NewStyle().Foreground(colAccent).Italic(true).Render("Catppuccin")
 	rest := styles.TitleSub.Render(" enjoyer")
 	lead := styles.TitleSub.Render("Yes, I am a ")
 	return lead + accent + rest
@@ -312,14 +312,14 @@ func renderEgg(styles Styles) string {
 // renderDetailBody builds the detail viewport's content: the prompt line,
 // then the section's kicker, paragraphs, rows, and links, each word-wrapped
 // to width rather than left to overflow the pane.
-func renderDetailBody(styles Styles, s site.Section, width int) string {
+func renderDetailBody(r *lipgloss.Renderer, styles Styles, s site.Section, width int) string {
 	if width <= 0 {
 		return ""
 	}
-	wrap := lipgloss.NewStyle().Width(width)
+	wrap := r.NewStyle().Width(width)
 
 	var b strings.Builder
-	b.WriteString(renderPrompt(s))
+	b.WriteString(renderPrompt(r, s))
 	b.WriteString("\n\n")
 
 	if s.Kicker != "" {
@@ -359,11 +359,11 @@ func renderDetailBody(styles Styles, s site.Section, width int) string {
 
 // renderPrompt is the starship-style header: directory, branch, an optional
 // language module, then the cat glyph and the prompt arrow.
-func renderPrompt(s site.Section) string {
+func renderPrompt(r *lipgloss.Renderer, s site.Section) string {
 	segs := PromptSegments(s)
 	parts := make([]string, 0, len(segs)+2)
 	for _, seg := range segs {
-		st := lipgloss.NewStyle().Foreground(seg.Color)
+		st := r.NewStyle().Foreground(seg.Color)
 		if seg.Bold {
 			st = st.Bold(true)
 		}
@@ -371,8 +371,8 @@ func renderPrompt(s site.Section) string {
 	}
 	// The cat glyph, matching src/components/Prompt.tsx's "U+F0D1B". Written
 	// as a Go escape rather than pasted so a copy cannot silently flatten it.
-	parts = append(parts, lipgloss.NewStyle().Foreground(colGreen).Render("\U000F0D1B"))
-	parts = append(parts, lipgloss.NewStyle().Foreground(colAccent).Bold(true).Render("❯"))
+	parts = append(parts, r.NewStyle().Foreground(colGreen).Render("\U000F0D1B"))
+	parts = append(parts, r.NewStyle().Foreground(colAccent).Bold(true).Render("❯"))
 	return strings.Join(parts, " ")
 }
 

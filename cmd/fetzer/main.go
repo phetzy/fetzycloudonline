@@ -184,7 +184,15 @@ func main() {
 // program.Quit() when that session's connection actually closes.
 func teaHandler(content site.Content) wishbubbletea.Handler {
 	return func(sess ssh.Session) (tea.Model, []tea.ProgramOption) {
-		m := tui.New(content, sess)
+		// wishbubbletea.MakeRenderer binds a lipgloss renderer to this
+		// session's terminal, so color detection reflects what the
+		// connecting client supports. The package-level lipgloss default
+		// renderer instead detects color support from this process's own
+		// stdout, which under systemd is a journald socket, not a TTY —
+		// that would strip color for every visitor regardless of their
+		// terminal.
+		renderer := wishbubbletea.MakeRenderer(sess)
+		m := tui.New(content, renderer, sess)
 		return m, []tea.ProgramOption{tea.WithAltScreen(), tea.WithoutSignalHandler()}
 	}
 }

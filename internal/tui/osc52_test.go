@@ -18,7 +18,7 @@ func TestOSC52EncodesBase64(t *testing.T) {
 
 func TestEnterRevealsTheFirstLink(t *testing.T) {
 	var out bytes.Buffer
-	m := New(site.MustLoad(), &out).SetSize(120, 40)
+	m := New(site.MustLoad(), testRenderer(), &out).SetSize(120, 40)
 	m = press(t, m, "tab") // projects/mapwright, which has two links
 
 	m = press(t, m, "enter")
@@ -36,7 +36,7 @@ func TestEnterRevealsTheFirstLink(t *testing.T) {
 
 func TestEnterDoesNothingWithoutLinks(t *testing.T) {
 	var out bytes.Buffer
-	m := New(site.MustLoad(), &out).SetSize(120, 40) // readme has no links
+	m := New(site.MustLoad(), testRenderer(), &out).SetSize(120, 40) // readme has no links
 
 	m = press(t, m, "enter")
 
@@ -65,7 +65,7 @@ func TestEggShowsAndAnyKeyDismisses(t *testing.T) {
 
 func TestRevealedClearsWhenSelectionChanges(t *testing.T) {
 	var out bytes.Buffer
-	m := New(site.MustLoad(), &out).SetSize(120, 40)
+	m := New(site.MustLoad(), testRenderer(), &out).SetSize(120, 40)
 	m = press(t, m, "tab") // projects/mapwright, which has links
 	m = press(t, m, "enter")
 	if m.Revealed() == "" {

@@ -22,17 +22,20 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"sync/atomic"
 	"syscall"
 	"time"
 	"unicode/utf8"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/ssh"
 	"github.com/charmbracelet/wish"
 	"github.com/charmbracelet/wish/activeterm"
 	wishbubbletea "github.com/charmbracelet/wish/bubbletea"
 	wishrecover "github.com/charmbracelet/wish/recover"
+	"github.com/muesli/termenv"
 	gossh "golang.org/x/crypto/ssh"
 
 	site "github.com/phetzy/fetzycloudonline"
@@ -184,16 +187,128 @@ func main() {
 // program.Quit() when that session's connection actually closes.
 func teaHandler(content site.Content) wishbubbletea.Handler {
 	return func(sess ssh.Session) (tea.Model, []tea.ProgramOption) {
-		// wishbubbletea.MakeRenderer binds a lipgloss renderer to this
-		// session's terminal, so color detection reflects what the
-		// connecting client supports. The package-level lipgloss default
-		// renderer instead detects color support from this process's own
-		// stdout, which under systemd is a journald socket, not a TTY —
-		// that would strip color for every visitor regardless of their
-		// terminal.
-		renderer := wishbubbletea.MakeRenderer(sess)
+		// newSessionRenderer binds a lipgloss renderer to this session's
+		// terminal, so color detection reflects what the connecting client
+		// supports, without ever blocking on a reply from that client (see
+		// its doc comment). The package-level lipgloss default renderer
+		// instead detects color support from this process's own stdout,
+		// which under systemd is a journald socket, not a TTY — that would
+		// strip color for every visitor regardless of their terminal.
+		renderer := newSessionRenderer(sess)
 		m := tui.New(content, renderer, sess)
 		return m, []tea.ProgramOption{tea.WithAltScreen(), tea.WithoutSignalHandler()}
+	}
+}
+
+// newSessionRenderer builds a lipgloss renderer bound to sess, with its
+// color profile and background pinned explicitly from information the SSH
+// protocol already gave us, instead of using wishbubbletea.MakeRenderer.
+//
+// MakeRenderer's newRenderer queries the connecting terminal directly — it
+// writes OSC 11 (background color) and Device Attributes (ESC [ c) and
+// blocks reading the reply, via wish's queryBackgroundColor /
+// querySessionBackgroundColor, with a 1-2s internal timeout. That timeout
+// does NOT reliably fire: it works by calling Cancel() on an
+// x/input.Reader wrapping a muesli/cancelreader, and cancelreader only
+// supports canceling an in-flight blocking Read() when the underlying
+// reader is a real *os.File (select-based cancellation on its fd). Our
+// session (charmbracelet/ssh.Session, an SSH channel, and even
+// ssh.Session.Pty().Slave, an emulated pty piped over that same channel)
+// is not a raw file descriptor, so cancelreader falls back to
+// fallbackCancelReader, whose Cancel() only sets a flag checked on the
+// *next* Read call — it cannot interrupt the Read() already blocked
+// waiting on the client. A client that never answers the query (some
+// older PuTTY builds, minimal terminals) therefore hangs forever, which is
+// exactly what was observed live: 45+ seconds with no frame ever
+// rendered. Calling SetColorProfile/SetHasDarkBackground on the renderer
+// MakeRenderer returns would be too late to prevent this anyway — by the
+// time it returns, its internal newRenderer has already sent the query and
+// blocked on the reply as part of constructing the renderer.
+//
+// The fix here instead builds a bare renderer (lipgloss.NewRenderer never
+// queries anything by itself — it only records the io.Writer) and calls
+// SetColorProfile and SetHasDarkBackground on it immediately, before
+// anything ever renders through it. Both setters flip an "explicit" flag
+// on the renderer that short-circuits the sync.Once-guarded lazy lookups
+// inside Renderer.ColorProfile()/HasDarkBackground() (see lipgloss's
+// renderer.go) — since those lookups never run, termenv's own
+// Output.EnvColorProfile()/HasDarkBackground() (the latter of which is
+// what performs the OSC 11 query on termenv's side) are never reached
+// either. No code path in this program ever calls ColorProfile() or
+// HasDarkBackground() before this function returns, so no query — from
+// wish or from termenv — is ever sent.
+func newSessionRenderer(sess ssh.Session) *lipgloss.Renderer {
+	r := lipgloss.NewRenderer(sess)
+
+	r.SetColorProfile(sessionColorProfile(sess.Environ()))
+
+	// The design is a fixed Catppuccin Macchiato palette (see
+	// internal/tui/styles.go) — a dark theme by construction, not something
+	// that depends on the connecting client's actual terminal background.
+	// Asserting it here is a correct fixed fact about this program, not a
+	// guess standing in for the OSC 11 query it replaces.
+	r.SetHasDarkBackground(true)
+
+	return r
+}
+
+// termsAlwaysTrueColor is the set of TERM values termenv's own
+// Output.ColorProfile() (termenv@v0.16.0/termenv_unix.go) treats as
+// truecolor unconditionally, regardless of COLORTERM. OpenSSH does not
+// forward COLORTERM by default, so a visitor on one of these terminals
+// arrives with only TERM set; without matching this table they would be
+// downgraded to plain ANSI here even though the OSC-11-querying code path
+// this function replaces gave them full color. Reproduced verbatim from
+// that switch rather than invented, since staying consistent with termenv
+// is the point — this function exists to preserve termenv's own decision,
+// just without the blocking query.
+var termsAlwaysTrueColor = map[string]bool{
+	"alacritty":     true,
+	"contour":       true,
+	"rio":           true,
+	"wezterm":       true,
+	"xterm-ghostty": true,
+	"xterm-kitty":   true,
+}
+
+// sessionColorProfile derives the termenv color profile to use for a
+// session from its environment, using the conventional COLORTERM/TERM
+// precedence rules: COLORTERM of "truecolor" or "24bit" means truecolor
+// (checked first, since it is the most specific signal and can promote a
+// terminal above what TERM alone would suggest); otherwise a TERM matching
+// termsAlwaysTrueColor means truecolor; otherwise a TERM containing
+// "256color" means 256-color; TERM of "dumb" or empty/missing means no
+// color; anything else gets basic ANSI.
+//
+// This is a pure function of the environment (ssh.Session.Environ(), which
+// already carries TERM — see (ssh.Session).Environ's doc comment — plus
+// COLORTERM when the client forwards it) precisely so it can be unit
+// tested without a live SSH session.
+func sessionColorProfile(environ []string) termenv.Profile {
+	lookup := func(key string) string {
+		prefix := key + "="
+		for _, kv := range environ {
+			if v, ok := strings.CutPrefix(kv, prefix); ok {
+				return v
+			}
+		}
+		return ""
+	}
+
+	switch lookup("COLORTERM") {
+	case "truecolor", "24bit":
+		return termenv.TrueColor
+	}
+
+	switch term := lookup("TERM"); {
+	case termsAlwaysTrueColor[term]:
+		return termenv.TrueColor
+	case term == "" || term == "dumb":
+		return termenv.Ascii
+	case strings.Contains(term, "256color"):
+		return termenv.ANSI256
+	default:
+		return termenv.ANSI
 	}
 }
 

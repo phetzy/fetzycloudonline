@@ -172,9 +172,19 @@
 			"title": "C1 — Software Engineer",
 			"kicker": "march 2022 – present · remote",
 			"paras": [
-				"Distributed systems and embedded software. Backend services in Go and TypeScript, React frontends, and AWS infrastructure managed as code with Terraform. Also builds internal tooling used across engineering teams."
+				"Design, build, and own production software end to end: backend services, web applications, and the infrastructure they run on.",
+				"Lead engineer on two internal platforms, owning architecture and delivery across distributed backend services, embedded Linux agents, and operator-facing web interfaces."
 			],
-			"rows": [{ "label": "prior", "body": "US Army infantry veteran, 2012–2015." }],
+			"rows": [
+				{ "label": "languages", "body": "Go, TypeScript (Node/Express), React" },
+				{ "label": "migration", "body": "Production Django services migrated to Go." },
+				{
+					"label": "infrastructure",
+					"body": "AWS (EC2, S3, Lambda) managed as code with Terraform and OpenTofu."
+				},
+				{ "label": "tooling", "body": "Internal tooling used across engineering teams." },
+				{ "label": "prior", "body": "US Army infantry veteran, 2012–2015." }
+			],
 			"links": []
 		},
 		{

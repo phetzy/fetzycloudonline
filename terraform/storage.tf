@@ -105,14 +105,3 @@ resource "aws_ssm_parameter" "host_key" {
     ignore_changes = [value]
   }
 }
-
-output "artifact_bucket" {
-  value = aws_s3_bucket.artifacts.id
-}
-
-# Task 8 needs this ARN as a literal string in the GitHub Actions YAML, and
-# it contains the account ID, which must never be committed. This output is
-# how it gets read at apply time and copied into a repo secret by hand.
-output "github_deploy_role_arn" {
-  value = aws_iam_role.github_deploy.arn
-}

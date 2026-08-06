@@ -183,9 +183,12 @@ authorized user, by design. What keeps that safe:
   `sessionRequestCallback` and logs its own "session rejected" line, at
   whatever rate the client sends requests within that one channel.
 
-### Deployment is not built
+### Deployment
 
-There is no deployment automation for this server yet. Sub-project 2b
-covers OpenTofu for AWS EC2, an S3 state backend, SSM Session Manager for
-administrative access, a GitHub OIDC role, and a GitHub Actions workflow —
-none of that exists in this repository today.
+The AWS infrastructure that puts this server on a public address — EC2, an
+Elastic IP, an S3 state backend and artifact bucket, SSM Session Manager for
+administrative access, a GitHub OIDC deploy role, and the GitHub Actions
+workflow that builds and ships `cmd/fetzer` — lives entirely under
+[`terraform/`](terraform/README.md). It is **not applied automatically**;
+see that README for the bootstrap-then-apply order, the GitHub repository
+secrets/variables the deploy workflow needs, and known first-apply caveats.

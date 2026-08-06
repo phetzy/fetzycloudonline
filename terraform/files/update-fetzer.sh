@@ -24,7 +24,15 @@ set -euo pipefail
 
 env_file="/etc/fetzer/env"
 install_path="/usr/local/bin/fetzer"
-s3_key="fetzer"
+
+# The artifact bucket holds every build under builds/<commit-sha> (kept
+# indefinitely, one object per deploy) plus a single "current" object that
+# the deploy workflow overwrites, pointer-style, on every successful build.
+# This script only ever reads "current" — it never touches the builds/
+# prefix, so those SHA-keyed objects exist purely so a human (or a future
+# rollback command) can `aws s3 cp s3://<bucket>/builds/<sha> s3://<bucket>/current`
+# to point "current" at an older build and re-run the deploy.
+s3_key="current"
 unit_name="fetzer"
 
 if [ ! -r "$env_file" ]; then

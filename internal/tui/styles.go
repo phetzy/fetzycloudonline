@@ -1,6 +1,9 @@
 package tui
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	"github.com/charmbracelet/bubbles/help"
+	"github.com/charmbracelet/lipgloss"
+)
 
 // Catppuccin Macchiato palette, matching the web build.
 const (
@@ -82,5 +85,41 @@ func NewStyles(r *lipgloss.Renderer) Styles {
 
 		Help: r.NewStyle().
 			Foreground(colSubtext1),
+	}
+}
+
+// helpKeyColor, helpDescColor, and helpSepColor mirror the values
+// charmbracelet/bubbles' help.New() hardcodes for its default Styles (see
+// bubbles/help.New). They are reproduced here, unchanged, purely so
+// newHelpStyles can rebuild the same look through the session renderer —
+// this is not a palette change.
+var (
+	helpKeyColor  = lipgloss.AdaptiveColor{Light: "#909090", Dark: "#626262"}
+	helpDescColor = lipgloss.AdaptiveColor{Light: "#B2B2B2", Dark: "#4A4A4A"}
+	helpSepColor  = lipgloss.AdaptiveColor{Light: "#DDDADA", Dark: "#3C3C3C"}
+)
+
+// newHelpStyles rebuilds help.Model's default Styles from r instead of the
+// package-level lipgloss default renderer. help.New() builds its Styles
+// with bare lipgloss.NewStyle() internally and offers no way to inject a
+// renderer, so left alone its key/description/separator text is styled by
+// whatever color profile this process's own stdout reports — the same bug
+// class this branch fixes everywhere else: under systemd that stdout is a
+// journald socket, not a TTY, so the help footer's key/description
+// two-tone styling would silently collapse to flat text regardless of what
+// the connecting client's terminal supports.
+func newHelpStyles(r *lipgloss.Renderer) help.Styles {
+	keyStyle := r.NewStyle().Foreground(helpKeyColor)
+	descStyle := r.NewStyle().Foreground(helpDescColor)
+	sepStyle := r.NewStyle().Foreground(helpSepColor)
+
+	return help.Styles{
+		ShortKey:       keyStyle,
+		ShortDesc:      descStyle,
+		ShortSeparator: sepStyle,
+		Ellipsis:       sepStyle,
+		FullKey:        keyStyle,
+		FullDesc:       descStyle,
+		FullSeparator:  sepStyle,
 	}
 }

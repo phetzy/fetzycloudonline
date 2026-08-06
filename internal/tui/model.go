@@ -78,6 +78,10 @@ func New(c site.Content, r *lipgloss.Renderer, w io.Writer) Model {
 		viewport: viewport.New(0, 0),
 		help:     help.New(),
 	}
+	// help.New() builds its own Styles from the package-level lipgloss
+	// default renderer with no way to inject one — see newHelpStyles for
+	// why that needs correcting the same way every other style here was.
+	m.help.Styles = newHelpStyles(r)
 	m.selected = FirstSectionOfTab(c, tab).ID
 	m.syncViewport()
 	return m

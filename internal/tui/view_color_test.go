@@ -62,8 +62,23 @@ func TestViewUsesColorWhenTheRendererSupportsIt(t *testing.T) {
 		style lipgloss.Style
 	}{
 		{"Title foreground (colAccent)", r.NewStyle().Foreground(colAccent).Bold(true)},
+		{"TitleSub/TabInactive foreground (colSubtext0)", r.NewStyle().Foreground(colSubtext0)},
 		{"TabActive background (colLavender)", r.NewStyle().Background(colLavender)},
 		{"PaneFocused border (colBorderAcc)", r.NewStyle().BorderForeground(colBorderAcc).Border(lipgloss.RoundedBorder())},
+		{"PaneUnfocused border (colSurface0)", r.NewStyle().BorderForeground(colSurface0).Border(lipgloss.RoundedBorder())},
+		{"Detail/List foreground (colText)", r.NewStyle().Foreground(colText)},
+		{"Help wrapper foreground (colSubtext1)", r.NewStyle().Foreground(colSubtext1)},
+		// help.Model (bubbles) builds its own Styles internally with bare
+		// lipgloss.NewStyle() and offers no constructor hook to inject a
+		// renderer — see newHelpStyles in styles.go, which model.go's New
+		// must rebind onto the session renderer after help.New() returns.
+		// Without that rebinding these two cases are exactly what regresses:
+		// the key/description text inside the help footer stays governed by
+		// this process's own stdout instead of the connecting client's
+		// terminal, even though the surrounding Help wrapper style (above)
+		// is correctly bound.
+		{"help key text (bubbles help.New default)", r.NewStyle().Foreground(helpKeyColor)},
+		{"help description text (bubbles help.New default)", r.NewStyle().Foreground(helpDescColor)},
 	}
 	for _, c := range cases {
 		want := escapeOpen(c.style)

@@ -343,8 +343,20 @@ be gotten back — a new Elastic IP allocation gets a different address, full
 stop. Everything else (the instance, the artifact bucket's contents, the
 host key parameter, even the S3 state bucket via bootstrap) can be
 recreated or restored. `tofu destroy` releases the Elastic IP permanently.
-If this address is ever pointed to from DNS (see the DNS section above),
-losing it means updating DNS again, not just re-running `tofu apply`.
+This address *is* pointed at from DNS — `ssh.fetzycloud.online` resolves to
+it — so losing it means editing the Cloudflare record again, not just
+re-running `tofu apply`. Returning visitors also have the SSH host key
+pinned against it.
+
+Because of that, `aws_eip.fetzer` carries `lifecycle { prevent_destroy =
+true }`. A `tofu destroy` against this config will now fail on that resource
+rather than releasing the address, which is the intended behaviour: the
+error is the safeguard. To release it deliberately, delete the `lifecycle`
+block first, then destroy.
+
+Note this also means `tofu destroy` cannot tear the whole project down in
+one command while the block is present. That is the trade: an intentional
+teardown costs one edit, and an unintentional one is impossible.
 
 ## Verification performed
 

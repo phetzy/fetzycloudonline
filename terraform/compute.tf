@@ -106,6 +106,18 @@ resource "aws_eip" "fetzer" {
   tags = {
     Name = "${var.project}-ssh-tui"
   }
+
+  # This address is the project's only durable public identity: the
+  # ssh.fetzycloud.online A record points at it, and returning visitors have
+  # its host key pinned against it. Releasing an Elastic IP is permanent —
+  # AWS hands it back to the pool and it cannot be reclaimed — so a stray
+  # `tofu destroy` would break the DNS record with no way to undo it.
+  # Everything else in this config is rebuildable from a commit; this is not.
+  #
+  # To intentionally release it, delete this block first, then destroy.
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 # Associated separately (rather than via aws_instance.associate_public_ip_address)

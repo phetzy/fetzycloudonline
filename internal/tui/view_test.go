@@ -31,18 +31,18 @@ func golden(t *testing.T, name, got string) {
 }
 
 func TestViewAt80x24(t *testing.T) {
-	m := New(site.MustLoad(), os.Stdout).SetSize(80, 24)
+	m := New(site.MustLoad(), testRenderer(), os.Stdout).SetSize(80, 24)
 	golden(t, "view_80x24", m.View())
 }
 
 func TestViewAtWideTerminal(t *testing.T) {
-	m := New(site.MustLoad(), os.Stdout).SetSize(140, 40)
+	m := New(site.MustLoad(), testRenderer(), os.Stdout).SetSize(140, 40)
 	golden(t, "view_140x40", m.View())
 }
 
 func TestViewNeverExceedsTheTerminalWidth(t *testing.T) {
 	for _, w := range []int{60, 80, 100, 140} {
-		m := New(site.MustLoad(), os.Stdout).SetSize(w, 24)
+		m := New(site.MustLoad(), testRenderer(), os.Stdout).SetSize(w, 24)
 		for i, line := range splitLines(m.View()) {
 			if width := visibleWidth(line); width > w {
 				t.Errorf("at %d columns, line %d is %d wide: %q", w, i, width, line)
@@ -59,8 +59,8 @@ func TestViewNeverExceedsTheTerminalWidth(t *testing.T) {
 // fewer than 5 rows, so selecting the last of projects' 5 sections requires
 // the window to have scrolled.
 func TestListPaneScrollsSelectionIntoView(t *testing.T) {
-	m := press(t, New(site.MustLoad(), os.Stdout).SetSize(60, 24), "tab") // projects
-	m = press(t, m, "j", "j", "j", "j")                                   // mapwright -> open-source (id "oss")
+	m := press(t, New(site.MustLoad(), testRenderer(), os.Stdout).SetSize(60, 24), "tab") // projects
+	m = press(t, m, "j", "j", "j", "j")                                                   // mapwright -> open-source (id "oss")
 	if m.Selected() != "oss" {
 		t.Fatalf("selected = %q, want oss (open-source)", m.Selected())
 	}
@@ -85,7 +85,7 @@ func containsLine(view, needle string) bool {
 
 func TestViewNeverExceedsTheTerminalHeight(t *testing.T) {
 	for _, size := range []struct{ w, h int }{{80, 24}, {100, 30}, {140, 40}} {
-		m := New(site.MustLoad(), os.Stdout).SetSize(size.w, size.h)
+		m := New(site.MustLoad(), testRenderer(), os.Stdout).SetSize(size.w, size.h)
 		if got := len(splitLines(m.View())); got > size.h {
 			t.Errorf("at %dx%d the frame is %d lines, which overflows the terminal",
 				size.w, size.h, got)

@@ -1,12 +1,28 @@
 package tui
 
 import (
+	"io"
 	"os"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/muesli/termenv"
 	site "github.com/phetzy/fetzycloudonline"
 )
+
+// testRenderer returns a renderer with its color profile explicitly forced
+// to Ascii (no color), so the golden-file tests are deterministic regardless
+// of whatever TTY (or lack of one) the test process happens to have — and,
+// crucially, so they build styles from an explicit renderer rather than the
+// package-level lipgloss default, which is the renderer this branch stops
+// using in the TUI itself. See view_color_test.go for the color-forced
+// regression test.
+func testRenderer() *lipgloss.Renderer {
+	r := lipgloss.NewRenderer(io.Discard)
+	r.SetColorProfile(termenv.Ascii)
+	return r
+}
 
 // press sends one keystroke through Update and returns the resulting model.
 func press(t *testing.T, m Model, keys ...string) Model {
@@ -38,7 +54,7 @@ func press(t *testing.T, m Model, keys ...string) Model {
 
 func newTestModel(t *testing.T) Model {
 	t.Helper()
-	return New(site.MustLoad(), os.Stdout).SetSize(120, 40)
+	return New(site.MustLoad(), testRenderer(), os.Stdout).SetSize(120, 40)
 }
 
 func TestSelectionMovesAndDoesNotWrap(t *testing.T) {
@@ -99,8 +115,8 @@ func TestJKScrollsViewportWhenItHasFocus(t *testing.T) {
 	// ever scroll regardless of Update's correctness. 80x24 (the floor size
 	// pinned by Task 4's golden) gives mapwright's 32 wrapped lines a 19-row
 	// viewport to overflow, which is what this test needs to exercise.
-	m := press(t, New(site.MustLoad(), os.Stdout).SetSize(80, 24), "tab") // projects/mapwright has long content
-	m = press(t, m, "l")                                                  // focus the viewport
+	m := press(t, New(site.MustLoad(), testRenderer(), os.Stdout).SetSize(80, 24), "tab") // projects/mapwright has long content
+	m = press(t, m, "l")                                                                  // focus the viewport
 
 	before := m.ViewportOffset()
 	m = press(t, m, "j")

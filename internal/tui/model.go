@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	site "github.com/phetzy/fetzycloudonline"
 )
 
@@ -24,9 +25,10 @@ const (
 // visitor currently is within it, and the bubbles components used to render
 // that state.
 type Model struct {
-	content site.Content
-	styles  Styles
-	keys    KeyMap
+	content  site.Content
+	styles   Styles
+	renderer *lipgloss.Renderer
+	keys     KeyMap
 
 	// out is where OSC 52 sequences are written — the SSH session, or
 	// stdout when run locally. Task 7 uses it; this task only stores it.
@@ -49,19 +51,29 @@ type Model struct {
 
 // New builds a Model rooted at the first tab's first section. w is where
 // OSC 52 escape sequences are written once link reveal lands in Task 7.
-func New(c site.Content, w io.Writer) Model {
+//
+// r is the renderer every style is built from. It must be bound to the
+// connecting session (see wishbubbletea.MakeRenderer) rather than being the
+// package-level default renderer, whose color detection reads this
+// process's own stdout — under systemd that's a journald socket, not a TTY,
+// which would strip color for every visitor regardless of their terminal.
+// Deliberately explicit rather than a package-level variable: a global
+// renderer would be shared across concurrent sessions with different
+// terminal capabilities.
+func New(c site.Content, r *lipgloss.Renderer, w io.Writer) Model {
 	var tab string
 	if len(c.Tabs) > 0 {
 		tab = c.Tabs[0].ID
 	}
 
 	m := Model{
-		content: c,
-		styles:  NewStyles(),
-		keys:    DefaultKeyMap(),
-		out:     w,
-		tabIdx:  0,
-		focus:   FocusList,
+		content:  c,
+		styles:   NewStyles(r),
+		renderer: r,
+		keys:     DefaultKeyMap(),
+		out:      w,
+		tabIdx:   0,
+		focus:    FocusList,
 
 		viewport: viewport.New(0, 0),
 		help:     help.New(),
@@ -124,7 +136,7 @@ func (m Model) selectedSection() site.Section {
 // and SetSize can return a modified copy in the Elm architecture style, but
 // that means a value-receiver syncViewport would mutate a throwaway copy.
 func (m *Model) syncViewport() {
-	m.viewport.SetContent(renderDetailBody(m.styles, m.selectedSection(), m.viewport.Width))
+	m.viewport.SetContent(renderDetailBody(m.renderer, m.styles, m.selectedSection(), m.viewport.Width))
 }
 
 // Accessors used by later tasks and their tests.

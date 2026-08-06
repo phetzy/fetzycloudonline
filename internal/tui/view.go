@@ -219,18 +219,34 @@ func (m Model) renderNameCard(outerW int) string {
 	return m.styles.NameCard.Width(styleW).Render(strings.Join(lines, "\n"))
 }
 
-// renderMetaCard renders the bordered role/status box beside the name card:
-// "role" and "status", pulled from the readme section's own rows in
-// content.json, with a green status dot as the one decorative addition.
-//
-// The web build's HeaderRow.tsx also shows a third "builds" line
-// summarizing the four projects, but that exact copy is hardcoded in the
-// component rather than present in content.json. Per the content-frozen
-// rule (report rather than invent), that line is intentionally omitted
-// here — see the report for detail.
+// shortRole trims content.json's role row down to the clause before the
+// first comma — "Software Engineer at C1, March 2022 – present" becomes
+// "Software Engineer at C1". It is a substring of the exact content.json
+// text, not paraphrased copy: the dates stay intact in the metadata table
+// below, and repeating them in the meta card unbalanced it against the
+// name card beside it.
+func shortRole(role string) string {
+	if i := strings.Index(role, ","); i >= 0 {
+		return role[:i]
+	}
+	return role
+}
+
+// buildsLine is the meta card's third line. It is not in content.json —
+// it is hardcoded, verbatim, in the web build's src/components/HeaderRow.tsx
+// (lines 21-22). Reproduced here character-for-character (including the
+// middot separators) because it is real, already-shipped site copy, not
+// invented text; see the report for why it lives here as a constant
+// instead of coming from content.json like everything else in this file.
+const buildsLine = "map servers · CLI tools · self-hosted platforms · hardware"
+
+// renderMetaCard renders the bordered role/status/builds box beside the
+// name card: "role" and "status" pulled from the readme section's own rows
+// in content.json, with a green status dot, plus the "builds" line from
+// HeaderRow.tsx (see buildsLine).
 func (m Model) renderMetaCard(outerW int) string {
 	id := m.identitySection()
-	role := rowByLabel(id, "role")
+	role := shortRole(rowByLabel(id, "role"))
 	status := rowByLabel(id, "status")
 
 	textW := cardTextWidth(outerW)
@@ -240,10 +256,12 @@ func (m Model) renderMetaCard(outerW int) string {
 	dot := m.renderer.NewStyle().Foreground(colGreen).Render("● ")
 	statusLine := m.styles.TitleSub.Render("status ") + dot +
 		m.renderer.NewStyle().Foreground(colGreen).Render(status)
+	buildsLineRendered := m.styles.TitleSub.Render("builds ") + m.styles.Detail.Render(buildsLine)
 
 	lines := []string{
 		truncateToWidth(roleLine, textW),
 		truncateToWidth(statusLine, textW),
+		truncateToWidth(buildsLineRendered, textW),
 	}
 
 	return m.styles.MetaCard.Width(styleW).Render(strings.Join(lines, "\n"))
@@ -271,10 +289,13 @@ func (m Model) renderHeaderRow(width int) string {
 	}
 	nameOuterW := nameContentW + cardPaddingOverhead + paneBorderOverhead
 
-	role := rowByLabel(id, "role")
+	role := shortRole(rowByLabel(id, "role"))
 	status := rowByLabel(id, "status")
 	metaContentW := lipgloss.Width("role " + role)
 	if w := lipgloss.Width("status ● " + status); w > metaContentW {
+		metaContentW = w
+	}
+	if w := lipgloss.Width("builds " + buildsLine); w > metaContentW {
 		metaContentW = w
 	}
 	metaOuterW := metaContentW + cardPaddingOverhead + paneBorderOverhead
@@ -318,6 +339,11 @@ func (m Model) renderTabBar(width int) string {
 	if width < wideThreshold {
 		return m.renderCompactTabBar(width)
 	}
+	// The active chip's "▌ " marker is a prefix on top of the label, not a
+	// substitute for it, so it does not need compensating leading spaces on
+	// the inactive chips — those get plain, symmetrically padded labels
+	// (Padding(0, 1) on TabInactive handles both sides equally). Only the
+	// active chip is asymmetric, by design: it alone carries the bar.
 	chips := make([]string, 0, len(m.content.Tabs))
 	for i, t := range m.content.Tabs {
 		if i == m.tabIdx {
@@ -325,7 +351,7 @@ func (m Model) renderTabBar(width int) string {
 			chips = append(chips, m.styles.ChipActiveBorder.Render(text))
 			continue
 		}
-		text := m.styles.TabInactive.Render("  " + t.Label)
+		text := m.styles.TabInactive.Render(t.Label)
 		chips = append(chips, m.styles.ChipInactiveBorder.Render(text))
 	}
 	row := lipgloss.JoinHorizontal(lipgloss.Top, chips...)
@@ -481,6 +507,14 @@ func (m Model) renderListPane(outerW, outerH int, focused bool) string {
 		line := truncateToWidth("  "+s.Label, textW)
 		lines = append(lines, m.styles.UnselectedRow.Render(line))
 	}
+
+	// Pad with blank rows so the status line lands pinned to the pane's
+	// bottom edge (mirroring ListPane.tsx's flex layout: header flex-none,
+	// rows flex-1, status flex-none) instead of sitting directly under
+	// whatever row happened to be last.
+	for len(lines) < rowsH+2 {
+		lines = append(lines, strings.Repeat(" ", textW))
+	}
 	lines = append(lines, truncateToWidth(m.styles.Help.Render(m.Status()), textW))
 
 	if len(lines) > styleH && styleH >= 0 {
@@ -615,6 +649,13 @@ func renderDetailBody(r *lipgloss.Renderer, styles Styles, s site.Section, width
 			}
 		}
 	}
+
+	// The web build closes the detail body with a small blinking caret
+	// (DetailPane.tsx's aria-hidden accent block). Terminals here don't
+	// blink it, but the filled accent block itself carries across as a
+	// two-cell background fill on its own trailing line.
+	b.WriteString("\n\n")
+	b.WriteString(r.NewStyle().Background(colAccent).Render("  "))
 
 	return b.String()
 }

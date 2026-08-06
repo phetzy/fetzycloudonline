@@ -1,13 +1,22 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { App } from './App'
+import { SECTIONS } from './content'
 
-test('renders the title block and metadata', () => {
+test('renders the title block and metadata from content.json', () => {
 	render(<App />)
 	const header = within(screen.getByTestId('header-row'))
-	expect(header.getByText('DAVID FETZER')).toBeInTheDocument()
-	expect(header.getByText('software engineer · boise, id · remote')).toBeInTheDocument()
-	expect(header.getByText(/Software Engineer at C1/)).toBeInTheDocument()
+	const readme = SECTIONS.find((s) => s.id === 'readme')!
+	const row = (label: string) => readme.rows.find((r) => r.label === label)!.body
+
+	// Asserted against content.json rather than against literals, because
+	// literals here are what let the header drift out of sync with the
+	// content file in the first place. The heading is uppercased in CSS, so
+	// its text content is the content.json casing.
+	expect(header.getByText(readme.title)).toBeInTheDocument()
+	expect(header.getByText(readme.kicker)).toBeInTheDocument()
+	expect(header.getByText(new RegExp(row('role').split(',')[0]))).toBeInTheDocument()
+	expect(header.getByText(new RegExp(row('status')))).toBeInTheDocument()
 })
 
 test('renders four tabs with readme active', () => {

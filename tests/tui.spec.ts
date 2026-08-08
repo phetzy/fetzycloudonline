@@ -59,8 +59,10 @@ test('h and l move focus, and the help hint follows', async ({ page }) => {
 test('the filter opens, narrows, and cancels', async ({ page }) => {
 	await gotoHydrated(page)
 	await page.keyboard.press('/')
+	// "mapwright" matches two sections: the project and the founder role in
+	// the work tab. Both are real entries with that name.
 	await page.getByLabel('Filter sections').fill('mapwright')
-	await expect(page.getByText('1/1 filtered')).toBeVisible()
+	await expect(page.getByText('1/2 filtered')).toBeVisible()
 
 	await page.keyboard.press('Escape')
 	await expect(page.getByLabel('Filter sections')).toHaveCount(0)

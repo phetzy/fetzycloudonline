@@ -23,7 +23,7 @@
 			],
 			"rows": [
 				{ "label": "location", "body": "Boise, ID · remote" },
-				{ "label": "role", "body": "Software Engineer at C1, March 2022 – present" },
+				{ "label": "role", "body": "Founder at Mapwright · Software Engineer at C1" },
 				{ "label": "status", "body": "Open to interesting conversations" }
 			],
 			"links": []
@@ -203,6 +203,37 @@
 			"links": []
 		},
 		{
+			"id": "mapwright-work",
+			"tab": "work",
+			"label": "mapwright",
+			"path": "~/site/work/mapwright",
+			"meta": "jun 2026 – present",
+			"title": "Mapwright — Founder & Engineer",
+			"kicker": "june 2026 – present · remote",
+			"paras": [
+				"Self-hosted map infrastructure: a drop-in Mapbox and MapTiler alternative that teams run on their own hardware."
+			],
+			"rows": [
+				{
+					"label": "product",
+					"body": "The full map stack — vector and raster tiles, a visual style editor, geocoding, routing, and static maps — as a single Docker image with embedded Postgres."
+				},
+				{
+					"label": "compatibility",
+					"body": "A Mapbox- and MapTiler-compatible API surface, so existing MapLibre applications migrate by changing one URL rather than rewriting against a new SDK."
+				},
+				{
+					"label": "platform",
+					"body": "API keys with scopes, origin allowlists, metering, and rate limiting, plus an admin console."
+				},
+				{
+					"label": "deployment",
+					"body": "Full-planet coverage, deployable air-gapped for on-premise and data-residency requirements."
+				}
+			],
+			"links": [{ "label": "mapwright.io", "href": "https://mapwright.io" }]
+		},
+		{
 			"id": "c1",
 			"tab": "work",
 			"label": "c1",
@@ -239,9 +270,9 @@
 				{ "label": "languages", "body": "Go, TypeScript, JavaScript, Python" },
 				{
 					"label": "backend",
-					"body": "Node.js, Express, PostgreSQL, PostGIS, REST APIs, WebSockets"
+					"body": "Node.js, Express, Convex, PostgreSQL, PostGIS, REST APIs, WebSockets, Stripe"
 				},
-				{ "label": "frontend", "body": "React, Tailwind" },
+				{ "label": "frontend", "body": "React, Next.js, Tailwind" },
 				{
 					"label": "infrastructure",
 					"body": "AWS, Terraform, OpenTofu, Docker, Kubernetes, Linux"

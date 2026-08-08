@@ -99,8 +99,8 @@ func TestTabCyclesAndSelectsFirstSection(t *testing.T) {
 		t.Errorf("got tab=%q selected=%q, want projects/mapwright", m.Tab(), m.Selected())
 	}
 	m = press(t, m, "tab")
-	if m.Tab() != "work" || m.Selected() != "c1" {
-		t.Errorf("got tab=%q selected=%q, want work/c1", m.Tab(), m.Selected())
+	if m.Tab() != "work" || m.Selected() != "mapwright-work" {
+		t.Errorf("got tab=%q selected=%q, want work/mapwright-work", m.Tab(), m.Selected())
 	}
 	m = press(t, m, "shift+tab")
 	if m.Tab() != "projects" {

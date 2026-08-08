@@ -2,13 +2,13 @@ package site
 
 import "testing"
 
-func TestLoadReturnsTenSectionsInOrder(t *testing.T) {
+func TestLoadReturnsElevenSectionsInOrder(t *testing.T) {
 	c, err := Load()
 	if err != nil {
 		t.Fatalf("Load() error: %v", err)
 	}
 	want := []string{
-		"readme", "mapwright", "3dpass", "transfer", "platform", "hat", "oss", "c1", "stack", "contact",
+		"readme", "mapwright", "3dpass", "transfer", "platform", "hat", "oss", "mapwright-work", "c1", "stack", "contact",
 	}
 	if len(c.Sections) != len(want) {
 		t.Fatalf("got %d sections, want %d", len(c.Sections), len(want))

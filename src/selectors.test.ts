@@ -16,7 +16,7 @@ test('with no filter, shows only the active tab', () => {
 		'hat',
 		'oss'
 	])
-	expect(visibleSections('work', '', false).map((s) => s.id)).toEqual(['c1', 'stack'])
+	expect(visibleSections('work', '', false).map((s) => s.id)).toEqual(['mapwright-work', 'c1', 'stack'])
 })
 
 test('while the filter is open, searches every section regardless of tab', () => {
@@ -29,7 +29,10 @@ test('with a filter string but the filter closed, stays within the active tab', 
 })
 
 test('filter matches label and title, case-insensitively', () => {
-	expect(visibleSections('projects', 'MAPWRIGHT', true).map((s) => s.id)).toEqual(['mapwright'])
+	expect(visibleSections('projects', 'MAPWRIGHT', true).map((s) => s.id)).toEqual([
+		'mapwright',
+		'mapwright-work'
+	])
 	expect(visibleSections('projects', 'secure element', true).map((s) => s.id)).toEqual(['hat'])
 })
 
@@ -45,7 +48,7 @@ test('list status reports position and total', () => {
 
 test('list status marks an active filter', () => {
 	const visible = visibleSections('projects', 'map', true)
-	expect(listStatus(visible, 'mapwright', 'map')).toBe('1/1 filtered')
+	expect(listStatus(visible, 'mapwright', 'map')).toBe('1/2 filtered')
 })
 
 test('list status reports no match on an empty list', () => {
@@ -71,7 +74,7 @@ test('prompt adds a language module only for sections that define one', () => {
 
 test('first section of a tab', () => {
 	expect(firstSectionOfTab('projects').id).toBe('mapwright')
-	expect(firstSectionOfTab('work').id).toBe('c1')
+	expect(firstSectionOfTab('work').id).toBe('mapwright-work')
 })
 
 test('clampIndex stops at both ends and does not wrap', () => {

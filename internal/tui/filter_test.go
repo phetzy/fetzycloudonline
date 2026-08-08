@@ -12,8 +12,8 @@ func TestFilterOpensAndNarrows(t *testing.T) {
 	if got := m.Filter(); got != "map" {
 		t.Errorf("filter = %q, want %q", got, "map")
 	}
-	if got := m.Status(); got != "1/1 filtered" {
-		t.Errorf("status = %q, want %q", got, "1/1 filtered")
+	if got := m.Status(); got != "1/2 filtered" {
+		t.Errorf("status = %q, want %q", got, "1/2 filtered")
 	}
 }
 

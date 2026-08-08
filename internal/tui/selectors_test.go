@@ -53,8 +53,8 @@ func TestVisibleSectionsFilterClosedStaysInTab(t *testing.T) {
 
 func TestVisibleSectionsMatchesCaseInsensitively(t *testing.T) {
 	c := site.MustLoad()
-	if got := ids(VisibleSections(c, "projects", "MAPWRIGHT", true)); !equal(got, []string{"mapwright"}) {
-		t.Errorf("got %v, want [mapwright]", got)
+	if got := ids(VisibleSections(c, "projects", "MAPWRIGHT", true)); !equal(got, []string{"mapwright", "mapwright-work"}) {
+		t.Errorf("got %v, want [mapwright mapwright-work] — the project and the role share a name", got)
 	}
 	if got := ids(VisibleSections(c, "projects", "secure element", true)); !equal(got, []string{"hat"}) {
 		t.Errorf("got %v, want [hat] — matching covers title as well as label", got)
@@ -72,8 +72,8 @@ func TestListStatus(t *testing.T) {
 		t.Errorf("got %q, want %q", got, "6/6")
 	}
 	filtered := VisibleSections(c, "projects", "map", true)
-	if got := ListStatus(filtered, "mapwright", "map"); got != "1/1 filtered" {
-		t.Errorf("got %q, want %q", got, "1/1 filtered")
+	if got := ListStatus(filtered, "mapwright", "map"); got != "1/2 filtered" {
+		t.Errorf("got %q, want %q", got, "1/2 filtered")
 	}
 	if got := ListStatus(nil, "mapwright", "zzz"); got != "no match" {
 		t.Errorf("got %q, want %q", got, "no match")

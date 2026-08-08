@@ -57,7 +57,7 @@ test('clicking a list row selects it', async () => {
 
 test('renders every section as an article', () => {
 	const { container } = render(<App />)
-	expect(container.querySelectorAll('article')).toHaveLength(10)
+	expect(container.querySelectorAll('article')).toHaveLength(11)
 })
 
 test('after hydration only the selected article is visible', async () => {
@@ -177,8 +177,10 @@ test('slash opens the filter and typing narrows the list', async () => {
 	const input = screen.getByLabelText('Filter sections')
 	expect(input).toHaveFocus()
 
+	// "mapwright" matches two sections: the project and the founder role in
+	// the work tab. Both are real entries with that name.
 	await user.type(input, 'mapwright')
-	expect(screen.getByText('1/1 filtered')).toBeInTheDocument()
+	expect(screen.getByText('1/2 filtered')).toBeInTheDocument()
 })
 
 test('the filter searches every tab, not just the active one', async () => {

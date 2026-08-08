@@ -54,7 +54,11 @@
 				{ "label": "05 static maps", "body": "Server-rendered static maps." },
 				{ "label": "06 wmts/wms", "body": "WMTS and WMS for standards-based GIS clients." },
 				{ "label": "07 api keys", "body": "Scopes, origin allowlists, metering, and rate limits." },
-				{ "label": "08 admin", "body": "Admin console." }
+				{ "label": "08 admin", "body": "Admin console." },
+				{
+					"label": "09 mcp",
+					"body": "An MCP server exposing migration, reference, and live-API tools to coding agents, so an assistant can port an app off Mapbox or call a running instance. Admin operations are deliberately excluded from the tool surface."
+				}
 			],
 			"links": [
 				{ "label": "mapwright.io", "href": "https://mapwright.io" },
@@ -141,20 +145,20 @@
 			"tab": "projects",
 			"label": "ai-platform",
 			"path": "~/site/projects/ai-platform",
-			"meta": "k3s · rag",
+			"meta": "agents · rag · k3s",
 			"title": "self-hosted ai platform",
-			"kicker": "private LLM and RAG stack on kubernetes",
+			"kicker": "a guarded ops agent over private LLM and RAG infrastructure",
 			"paras": [
 				"A multi-node K3s cluster running across Raspberry Pis, with GPU inference offloaded to a virtualized host elsewhere on the same network. Open WebUI, Ollama, a FastAPI retrieval service over a Qdrant vector store, Prometheus and Grafana observability, and automated backup-freshness checks."
 			],
 			"rows": [
 				{
 					"label": "ops agent",
-					"body": "A read-only operations agent answers infrastructure questions from runbooks and live cluster state."
+					"body": "A read-only operations agent answers infrastructure questions from runbooks and from live cluster state, calling tools and parsing their output into typed views rather than pasting raw text back."
 				},
 				{
 					"label": "safety",
-					"body": "Every request passes a default-deny safety router: an LLM intent classifier and a regex gate run independently, and either one flagging write intent stops execution before it starts. Writes come back as a scoped review checklist — the agent proposes, a human approves."
+					"body": "Every request passes a default-deny safety router before any tool or retrieval runs: an LLM intent classifier and a regex gate work independently, and either one flagging write intent stops execution. Writes return a scoped review checklist marked proposed_action_only — the agent drafts, a human applies, and it may never report a change as done."
 				},
 				{
 					"label": "architecture",
@@ -253,6 +257,10 @@
 				{
 					"label": "deployment",
 					"body": "Full-planet coverage, deployable air-gapped for on-premise and data-residency requirements."
+				},
+				{
+					"label": "agents",
+					"body": "An MCP server gives coding agents migration, reference, and live-API tools, so an assistant can port an application off Mapbox or query a running instance. Key management is left out of the tool surface on purpose."
 				}
 			],
 			"links": [{ "label": "mapwright.io", "href": "https://mapwright.io" }]
@@ -278,6 +286,7 @@
 					"body": "AWS, Terraform, OpenTofu, Docker, Kubernetes, Linux"
 				},
 				{ "label": "hardware", "body": "KiCad, embedded Linux, I2C" },
+				{ "label": "ai", "body": "Ollama, Qdrant, RAG retrieval, MCP servers, agent tooling" },
 				{
 					"label": "domains",
 					"body": "geospatial, embedded systems, self-hosted infrastructure"

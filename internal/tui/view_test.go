@@ -57,11 +57,11 @@ func TestViewNeverExceedsTheTerminalWidth(t *testing.T) {
 // rows, so hard-truncating at the pane height (rather than scrolling) can
 // leave the current selection — and its "›" marker — entirely off-screen
 // with no on-screen sign anything changed. At 60x24, the list pane has far
-// fewer than 5 rows, so selecting the last of projects' 5 sections requires
+// fewer than 6 rows, so selecting the last of projects' 6 sections requires
 // the window to have scrolled.
 func TestListPaneScrollsSelectionIntoView(t *testing.T) {
 	m := press(t, New(site.MustLoad(), testRenderer(), os.Stdout).SetSize(60, 24), "tab") // projects
-	m = press(t, m, "j", "j", "j", "j")                                                   // mapwright -> open-source (id "oss")
+	m = press(t, m, "j", "j", "j", "j", "j")                                              // mapwright -> open-source (id "oss")
 	if m.Selected() != "oss" {
 		t.Fatalf("selected = %q, want oss (open-source)", m.Selected())
 	}

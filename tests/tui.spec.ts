@@ -40,11 +40,11 @@ test('the detail pane scrolls independently of the list', async ({ page }) => {
 test('j and k move the selection, and the status follows', async ({ page }) => {
 	await gotoHydrated(page)
 	await page.keyboard.press('Tab')
-	await expect(page.getByText('1/5')).toBeVisible()
+	await expect(page.getByText('1/6')).toBeVisible()
 
 	await page.keyboard.press('j')
-	await expect(page.getByText('2/5')).toBeVisible()
-	await expect(page.getByRole('button', { name: '› transfer-it-cli' })).toBeVisible()
+	await expect(page.getByText('2/6')).toBeVisible()
+	await expect(page.getByRole('button', { name: '› 3dpass' })).toBeVisible()
 })
 
 test('h and l move focus, and the help hint follows', async ({ page }) => {

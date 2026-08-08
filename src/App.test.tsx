@@ -42,7 +42,7 @@ test('the list shows the active tab name and its sections', async () => {
 	expect(screen.getByText('PROJECTS')).toBeInTheDocument()
 	expect(screen.getByRole('button', { name: '› mapwright' })).toBeInTheDocument()
 	expect(screen.getByRole('button', { name: 'transfer-it-cli' })).toBeInTheDocument()
-	expect(screen.getByText('1/5')).toBeInTheDocument()
+	expect(screen.getByText('1/6')).toBeInTheDocument()
 })
 
 test('clicking a list row selects it', async () => {
@@ -52,12 +52,12 @@ test('clicking a list row selects it', async () => {
 	await user.click(screen.getByRole('button', { name: 'transfer-it-cli' }))
 
 	expect(screen.getByRole('button', { name: '› transfer-it-cli' })).toBeInTheDocument()
-	expect(screen.getByText('2/5')).toBeInTheDocument()
+	expect(screen.getByText('3/6')).toBeInTheDocument()
 })
 
 test('renders every section as an article', () => {
 	const { container } = render(<App />)
-	expect(container.querySelectorAll('article')).toHaveLength(9)
+	expect(container.querySelectorAll('article')).toHaveLength(10)
 })
 
 test('after hydration only the selected article is visible', async () => {
@@ -92,7 +92,7 @@ test('j and k move the selection when the list has focus', async () => {
 	await user.click(screen.getByRole('tab', { name: 'projects' }))
 
 	await user.keyboard('j')
-	expect(screen.getByRole('button', { name: '› transfer-it-cli' })).toBeInTheDocument()
+	expect(screen.getByRole('button', { name: '› 3dpass' })).toBeInTheDocument()
 
 	await user.keyboard('k')
 	expect(screen.getByRole('button', { name: '› mapwright' })).toBeInTheDocument()
@@ -118,10 +118,10 @@ test('g and G jump to the first and last item', async () => {
 	await user.click(screen.getByRole('tab', { name: 'projects' }))
 
 	await user.keyboard('{Shift>}G{/Shift}')
-	expect(screen.getByText('5/5')).toBeInTheDocument()
+	expect(screen.getByText('6/6')).toBeInTheDocument()
 
 	await user.keyboard('g')
-	expect(screen.getByText('1/5')).toBeInTheDocument()
+	expect(screen.getByText('1/6')).toBeInTheDocument()
 })
 
 test('h and l move focus between panes', async () => {
@@ -201,10 +201,10 @@ test('escape cancels the filter and clears it, leaving you where it carried you'
 	// Typing "mapwright" from readme crosses into projects and selects mapwright,
 	// since readme drops out of the match list partway through. Escape only clears
 	// filtering/filter — it does not rewind the tab or selection — so afterward the
-	// list is the full, unfiltered projects tab (5 sections) with mapwright first:
-	// 1/5, not 1/1.
+	// list is the full, unfiltered projects tab (6 sections) with mapwright first:
+	// 1/6, not 1/1.
 	expect(screen.queryByLabelText('Filter sections')).not.toBeInTheDocument()
-	expect(screen.getByText('1/5')).toBeInTheDocument()
+	expect(screen.getByText('1/6')).toBeInTheDocument()
 })
 
 test('enter keeps the filter and closes the input', async () => {

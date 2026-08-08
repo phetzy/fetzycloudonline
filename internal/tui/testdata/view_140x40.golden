@@ -14,9 +14,9 @@
 │                        ││ I build infrastructure — map servers, command-line tools, self-hosted platforms, and the hardware underneath   │
 │                        ││ them.                                                                                                          │
 │                        ││                                                                                                                │
-│                        ││ Four independent projects carry this page: a self-hosted map server sold as a Mapbox alternative, a static Go  │
-│                        ││ binary for browserless file transfer, a private LLM and RAG platform on Kubernetes, and a secure element board │
-│                        ││ for the Raspberry Pi.                                                                                          │
+│                        ││ Five independent projects carry this page: a self-hosted map server sold as a Mapbox alternative, a static Go  │
+│                        ││ binary for browserless file transfer, a private LLM and RAG platform on Kubernetes, a secure element board for │
+│                        ││ the Raspberry Pi, and a 3D-printing service that prices and fulfils uploaded parts.                            │
 │                        ││                                                                                                                │
 │                        ││ ────────────────────────────────────────────────────────────────────────────────────────────────────────────── │
 │                        ││ location           Boise, ID · remote                                                                          │

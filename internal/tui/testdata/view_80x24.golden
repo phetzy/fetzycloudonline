@@ -16,9 +16,9 @@
 │                        ││ tools, self-hosted platforms, and the hardware     │
 │                        ││ underneath them.                                   │
 │                        ││                                                    │
-│                        ││ Four independent projects carry this page: a self- │
+│                        ││ Five independent projects carry this page: a self- │
 │                        ││ hosted map server sold as a Mapbox alternative, a  │
 │                        ││ static Go binary for browserless file transfer, a  │
-│ 1/1                    ││ private LLM and RAG platform on Kubernetes, and a  │
+│ 1/1                    ││ private LLM and RAG platform on Kubernetes, a      │
 ╰────────────────────────╯╰────────────────────────────────────────────────────╯
 ↑/↓ j/k select • h/l ←/→ pane • tab next tab • / filter • g/G first/last …      

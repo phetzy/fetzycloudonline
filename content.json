@@ -19,7 +19,7 @@
 			"kicker": "software engineer · boise, id · remote",
 			"paras": [
 				"I build infrastructure — map servers, command-line tools, self-hosted platforms, and the hardware underneath them.",
-				"Four independent projects carry this page: a self-hosted map server sold as a Mapbox alternative, a static Go binary for browserless file transfer, a private LLM and RAG platform on Kubernetes, and a secure element board for the Raspberry Pi."
+				"Five independent projects carry this page: a self-hosted map server sold as a Mapbox alternative, a static Go binary for browserless file transfer, a private LLM and RAG platform on Kubernetes, a secure element board for the Raspberry Pi, and a 3D-printing service that prices and fulfils uploaded parts."
 			],
 			"rows": [
 				{ "label": "location", "body": "Boise, ID · remote" },
@@ -60,6 +60,42 @@
 				{ "label": "mapwright.io", "href": "https://mapwright.io" },
 				{ "label": "docs", "href": "https://mapwright.io/docs" }
 			]
+		},
+		{
+			"id": "3dpass",
+			"tab": "projects",
+			"label": "3dpass",
+			"path": "~/site/projects/3dpass",
+			"meta": "next.js · convex · stripe",
+			"title": "3dpass",
+			"kicker": "3d printing as a service · 3dpass.shop",
+			"paras": [
+				"A 3D-printing service. A customer uploads a mesh, the server measures it, prices it, takes payment through Stripe, and tracks the part through printing and shipping.",
+				"Next.js and Convex, with a Python bridge on the print-farm LAN: the printers have no public ingress, so the bridge connects outbound, mirrors telemetry, and advances jobs."
+			],
+			"rows": [
+				{
+					"label": "pricing",
+					"body": "Server-authoritative. The browser posts a print configuration and receives totals — never a coefficient, never a rate."
+				},
+				{
+					"label": "measurement",
+					"body": "Volume is the billing quantity, so it is recomputed server-side from the stored bytes rather than trusted from the client."
+				},
+				{
+					"label": "boundaries",
+					"body": "Every backend function declares argument and return validators; money and status writes are internal-only, reachable from the signed Stripe webhook."
+				},
+				{
+					"label": "bridge",
+					"body": "Ships with a simulator driving the same contract as the printers, so the admin queue and order flow run with no hardware attached."
+				},
+				{
+					"label": "testing",
+					"body": "Playwright end-to-end and unit tests across the money, authorization, and file paths, with enforced coverage thresholds. CI is the only path to production."
+				}
+			],
+			"links": [{ "label": "3dpass.shop", "href": "https://www.3dpass.shop" }]
 		},
 		{
 			"id": "transfer",

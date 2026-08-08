@@ -9,8 +9,8 @@ test('eleven sections in the documented order', () => {
 		'platform',
 		'hat',
 		'oss',
-		'mapwright-work',
 		'c1',
+		'mapwright-work',
 		'stack',
 		'contact'
 	])

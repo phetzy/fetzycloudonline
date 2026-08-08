@@ -23,7 +23,7 @@
 			],
 			"rows": [
 				{ "label": "location", "body": "Boise, ID · remote" },
-				{ "label": "role", "body": "Founder at Mapwright · Software Engineer at C1" },
+				{ "label": "role", "body": "Software Engineer at C1 · Founder at Mapwright" },
 				{ "label": "status", "body": "Open to interesting conversations" }
 			],
 			"links": []
@@ -203,6 +203,30 @@
 			"links": []
 		},
 		{
+			"id": "c1",
+			"tab": "work",
+			"label": "c1",
+			"path": "~/site/work/c1",
+			"meta": "mar 2022 – present",
+			"title": "C1 — Software Engineer",
+			"kicker": "march 2022 – present · remote",
+			"paras": [
+				"Design, build, and own production software end to end: backend services, web applications, and the infrastructure they run on.",
+				"Lead engineer on two internal platforms, owning architecture and delivery across distributed backend services, embedded Linux agents, and operator-facing web interfaces."
+			],
+			"rows": [
+				{ "label": "languages", "body": "Go, TypeScript (Node/Express), React" },
+				{ "label": "migration", "body": "Production Django services migrated to Go." },
+				{
+					"label": "infrastructure",
+					"body": "AWS (EC2, S3, Lambda) managed as code with Terraform and OpenTofu."
+				},
+				{ "label": "tooling", "body": "Internal tooling used across engineering teams." },
+				{ "label": "prior", "body": "US Army infantry veteran, 2012–2015." }
+			],
+			"links": []
+		},
+		{
 			"id": "mapwright-work",
 			"tab": "work",
 			"label": "mapwright",
@@ -232,30 +256,6 @@
 				}
 			],
 			"links": [{ "label": "mapwright.io", "href": "https://mapwright.io" }]
-		},
-		{
-			"id": "c1",
-			"tab": "work",
-			"label": "c1",
-			"path": "~/site/work/c1",
-			"meta": "mar 2022 – present",
-			"title": "C1 — Software Engineer",
-			"kicker": "march 2022 – present · remote",
-			"paras": [
-				"Design, build, and own production software end to end: backend services, web applications, and the infrastructure they run on.",
-				"Lead engineer on two internal platforms, owning architecture and delivery across distributed backend services, embedded Linux agents, and operator-facing web interfaces."
-			],
-			"rows": [
-				{ "label": "languages", "body": "Go, TypeScript (Node/Express), React" },
-				{ "label": "migration", "body": "Production Django services migrated to Go." },
-				{
-					"label": "infrastructure",
-					"body": "AWS (EC2, S3, Lambda) managed as code with Terraform and OpenTofu."
-				},
-				{ "label": "tooling", "body": "Internal tooling used across engineering teams." },
-				{ "label": "prior", "body": "US Army infantry veteran, 2012–2015." }
-			],
-			"links": []
 		},
 		{
 			"id": "stack",

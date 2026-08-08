@@ -16,7 +16,7 @@ test('with no filter, shows only the active tab', () => {
 		'hat',
 		'oss'
 	])
-	expect(visibleSections('work', '', false).map((s) => s.id)).toEqual(['mapwright-work', 'c1', 'stack'])
+	expect(visibleSections('work', '', false).map((s) => s.id)).toEqual(['c1', 'mapwright-work', 'stack'])
 })
 
 test('while the filter is open, searches every section regardless of tab', () => {
@@ -74,7 +74,7 @@ test('prompt adds a language module only for sections that define one', () => {
 
 test('first section of a tab', () => {
 	expect(firstSectionOfTab('projects').id).toBe('mapwright')
-	expect(firstSectionOfTab('work').id).toBe('mapwright-work')
+	expect(firstSectionOfTab('work').id).toBe('c1')
 })
 
 test('clampIndex stops at both ends and does not wrap', () => {

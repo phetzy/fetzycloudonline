@@ -64,8 +64,8 @@ func TestSelectionMovesAndDoesNotWrap(t *testing.T) {
 	}
 
 	m = press(t, m, "j")
-	if m.Selected() != "3dpass" {
-		t.Errorf("after j, selected = %q, want 3dpass", m.Selected())
+	if m.Selected() != "osnova" {
+		t.Errorf("after j, selected = %q, want osnova", m.Selected())
 	}
 
 	m = press(t, m, "k", "k") // already at the top; must not wrap

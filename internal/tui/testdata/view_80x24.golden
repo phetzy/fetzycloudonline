@@ -1,8 +1,8 @@
 ╭──────────────────────────────────────────────────────────────────────────────╮
 │  DAVID FETZER · software engineer · boise, id · remote                       │
-│  role Software Engineer at C1 · Founder at Mapwright                         │
+│  role Software Engineer at C1 · building osnova and Domovoi                  │
 │  status ● Open to interesting conversations                                  │
-│  builds map servers · CLI tools · self-hosted platforms · hardware           │
+│  builds agent tools · map servers · CLIs · self-hosted platforms · hardware  │
 ╰──────────────────────────────────────────────────────────────────────────────╯
 ╭──────────╮╭──────────╮╭──────╮╭─────────╮                                     
 │ ▌ readme ││ projects ││ work ││ contact │                                     
@@ -12,13 +12,13 @@
 │ ────────────────────── ││ David Fetzer                                       │
 │ › README.md            ││ software engineer · boise, id · remote             │
 │                        ││                                                    │
-│                        ││ I build infrastructure — map servers, command-line │
-│                        ││ tools, self-hosted platforms, and the hardware     │
-│                        ││ underneath them.                                   │
+│                        ││ I build infrastructure — tooling for AI coding     │
+│                        ││ agents, map servers, command-line tools, self-     │
+│                        ││ hosted platforms, and the hardware underneath      │
+│                        ││ them.                                              │
 │                        ││                                                    │
-│                        ││ Five independent projects carry this page: a self- │
-│                        ││ hosted map server sold as a Mapbox alternative, a  │
-│                        ││ static Go binary for browserless file transfer, a  │
-│ 1/1                    ││ private LLM and RAG platform on Kubernetes, a      │
+│                        ││ Seven independent projects carry this page: a      │
+│                        ││ deterministic code map for AI coding agents, a     │
+│ 1/1                    ││ local-first runner for those agents across         │
 ╰────────────────────────╯╰────────────────────────────────────────────────────╯
 ↑/↓ j/k select • h/l ←/→ pane • tab next tab • / filter • g/G first/last …      

@@ -1,6 +1,6 @@
 {
 	"header": {
-		"builds": "map servers · CLI tools · self-hosted platforms · hardware"
+		"builds": "agent tools · map servers · CLIs · self-hosted platforms · hardware"
 	},
 	"tabs": [
 		{ "id": "readme", "label": "readme" },
@@ -18,12 +18,12 @@
 			"title": "David Fetzer",
 			"kicker": "software engineer · boise, id · remote",
 			"paras": [
-				"I build infrastructure — map servers, command-line tools, self-hosted platforms, and the hardware underneath them.",
-				"Five independent projects carry this page: a self-hosted map server sold as a Mapbox alternative, a static Go binary for browserless file transfer, a private LLM and RAG platform on Kubernetes, a secure element board for the Raspberry Pi, and a 3D-printing service that prices and fulfils uploaded parts."
+				"I build infrastructure — tooling for AI coding agents, map servers, command-line tools, self-hosted platforms, and the hardware underneath them.",
+				"Seven independent projects carry this page: a deterministic code map for AI coding agents, a local-first runner for those agents across machines, a self-hosted Mapbox alternative that was acquired in 2026, a static Go binary for browserless file transfer, a private LLM and RAG platform on Kubernetes, a secure element board for the Raspberry Pi, and a 3D-printing service that prices and fulfils uploaded parts."
 			],
 			"rows": [
 				{ "label": "location", "body": "Boise, ID · remote" },
-				{ "label": "role", "body": "Software Engineer at C1 · Founder at Mapwright" },
+				{ "label": "role", "body": "Software Engineer at C1 · building osnova and Domovoi" },
 				{ "label": "status", "body": "Open to interesting conversations" }
 			],
 			"links": []
@@ -33,11 +33,11 @@
 			"tab": "projects",
 			"label": "mapwright",
 			"path": "~/site/projects/mapwright",
-			"meta": "flagship",
+			"meta": "acquired 2026",
 			"title": "mapwright",
-			"kicker": "self-hosted map infrastructure · mapwright.io",
+			"kicker": "self-hosted map infrastructure · mapwright.io · acquired",
 			"paras": [
-				"A self-hosted map server. The full Mapbox stack — tiles, styles, geocoding, routing, static maps — running on your own hardware as a single Docker image with embedded Postgres.",
+				"A self-hosted map server. The full Mapbox stack — tiles, styles, geocoding, routing, static maps — running on your own hardware as a single Docker image with embedded Postgres. Founded in June 2026 and acquired the same year.",
 				"Mapwright speaks Mapbox and MapTiler URL shapes, so existing MapLibre applications migrate by changing a base URL rather than rewriting against a new SDK. It runs air-gapped for on-premise and data-residency requirements."
 			],
 			"rows": [
@@ -64,6 +64,77 @@
 				{ "label": "mapwright.io", "href": "https://mapwright.io" },
 				{ "label": "docs", "href": "https://mapwright.io/docs" }
 			]
+		},
+		{
+			"id": "osnova",
+			"tab": "projects",
+			"label": "osnova",
+			"path": "~/site/projects/osnova",
+			"meta": "typescript · mcp · tree-sitter",
+			"title": "osnova",
+			"kicker": "deterministic code map for AI coding agents · getosnova.dev",
+			"paras": [
+				"Osnova indexes a repository into a symbol and call graph with tree-sitter, then serves it to any MCP client or from the command line. Same input, same output, byte for byte: no embeddings, no telemetry, and no network connection unless asked.",
+				"Twenty languages, seven with deep adapters: TypeScript, JavaScript, Python, Go, Rust, Java, and C#. Published on npm as @getdomovoi/osnova under Apache-2.0."
+			],
+			"rows": [
+				{
+					"label": "tools",
+					"body": "Ten tools over MCP and the CLI: task context, symbol and text search, callers and callees, change impact from a diff, test discovery, and unreferenced-code candidates."
+				},
+				{
+					"label": "answers",
+					"body": "Every answer carries exact file and line, the resolution basis of each edge, and an exact count of what its budget left out. An empty caller list reads as no indexed caller, never as proof of none."
+				},
+				{
+					"label": "determinism",
+					"body": "Two fresh builds of the same tree produce identical index hashes."
+				},
+				{
+					"label": "clients",
+					"body": "One global install wires Claude Code, Codex, Cursor, OpenCode, Kilo, and Pi with MCP entries, hooks, and a shared skill. Setup previews its diff and writes nothing until --apply."
+				}
+			],
+			"links": [
+				{ "label": "getosnova.dev", "href": "https://getosnova.dev" },
+				{ "label": "github", "href": "https://github.com/getdomovoi/osnova" },
+				{ "label": "npm", "href": "https://www.npmjs.com/package/@getdomovoi/osnova" }
+			]
+		},
+		{
+			"id": "domovoi",
+			"tab": "projects",
+			"label": "domovoi",
+			"path": "~/site/projects/domovoi",
+			"meta": "typescript · electron · early",
+			"title": "domovoi",
+			"kicker": "local-first runner for AI coding agents · apache-2.0",
+			"paras": [
+				"A daemon sits beside the code and renders its agent sessions in desktop, browser, and mobile clients. Repository state, credentials, terminals, worktrees, and tool execution stay on the execution machine; clients receive typed state, diffs, terminal streams, approval requests, and sandboxed previews."
+			],
+			"rows": [
+				{
+					"label": "protocol",
+					"body": "A versioned Zod protocol over authenticated WebSocket JSON-RPC, covering permissions, sessions, approvals, threads, and artifacts."
+				},
+				{
+					"label": "clients",
+					"body": "A desktop app on Electron, an installable browser PWA, an Expo mobile app, and a terminal CLI, sharing one React workspace."
+				},
+				{
+					"label": "approvals",
+					"body": "Ask, Plan, and Build are permission modes. Hard gates require explicit approval, and smaller screens collapse information without omitting approval facts."
+				},
+				{
+					"label": "security",
+					"body": "Every daemon requires authentication. Remote listeners are opt-in and terminate TLS themselves; a plaintext non-loopback listener is refused. Previews load only with short-lived signed capabilities scoped to one artifact revision."
+				},
+				{
+					"label": "licensing",
+					"body": "Open-core. The daemon, protocol, clients, and local transports are Apache-2.0."
+				}
+			],
+			"links": [{ "label": "github", "href": "https://github.com/getdomovoi/domovoi" }]
 		},
 		{
 			"id": "3dpass",
@@ -202,8 +273,17 @@
 			"meta": "contributions",
 			"title": "open source",
 			"kicker": "contributions",
-			"paras": ["Contributions to Jellyfin and Websurfx."],
-			"rows": [],
+			"paras": ["Contributions to Jellyfin, Websurfx, and jev-router."],
+			"rows": [
+				{
+					"label": "websurfx",
+					"body": "Rosé Pine colorscheme variants, and further stripping of debug symbols to cut binary size."
+				},
+				{
+					"label": "jev-router",
+					"body": "Fixed routing decisions going unrecorded in print mode."
+				}
+			],
 			"links": []
 		},
 		{
@@ -235,11 +315,12 @@
 			"tab": "work",
 			"label": "mapwright",
 			"path": "~/site/work/mapwright",
-			"meta": "jun 2026 – present",
+			"meta": "jun 2026 – 2026",
 			"title": "Mapwright — Founder & Engineer",
-			"kicker": "june 2026 – present · remote",
+			"kicker": "june 2026 – 2026 · acquired · remote",
 			"paras": [
-				"Self-hosted map infrastructure: a drop-in Mapbox and MapTiler alternative that teams run on their own hardware."
+				"Self-hosted map infrastructure: a drop-in Mapbox and MapTiler alternative that teams run on their own hardware.",
+				"Founded, built, and shipped the product, which was acquired in 2026."
 			],
 			"rows": [
 				{
@@ -280,13 +361,16 @@
 					"label": "backend",
 					"body": "Node.js, Express, Convex, PostgreSQL, PostGIS, REST APIs, WebSockets, Stripe"
 				},
-				{ "label": "frontend", "body": "React, Next.js, Tailwind" },
+				{ "label": "frontend", "body": "React, Next.js, Tailwind, Electron" },
 				{
 					"label": "infrastructure",
 					"body": "AWS, Terraform, OpenTofu, Docker, Kubernetes, Linux"
 				},
 				{ "label": "hardware", "body": "KiCad, embedded Linux, I2C" },
-				{ "label": "ai", "body": "Ollama, Qdrant, RAG retrieval, MCP servers, agent tooling" },
+				{
+					"label": "ai",
+					"body": "Ollama, Qdrant, RAG retrieval, MCP servers, tree-sitter code indexing, agent tooling"
+				},
 				{
 					"label": "domains",
 					"body": "geospatial, embedded systems, self-hosted infrastructure"

@@ -29,7 +29,7 @@ func equal(a, b []string) bool {
 func TestVisibleSectionsNoFilterShowsActiveTab(t *testing.T) {
 	c := site.MustLoad()
 	got := ids(VisibleSections(c, "projects", "", false))
-	want := []string{"mapwright", "3dpass", "transfer", "platform", "hat", "oss"}
+	want := []string{"mapwright", "osnova", "domovoi", "3dpass", "transfer", "platform", "hat", "oss"}
 	if !equal(got, want) {
 		t.Errorf("got %v, want %v", got, want)
 	}
@@ -65,11 +65,11 @@ func TestListStatus(t *testing.T) {
 	c := site.MustLoad()
 	visible := VisibleSections(c, "projects", "", false)
 
-	if got := ListStatus(visible, "mapwright", ""); got != "1/6" {
-		t.Errorf("got %q, want %q", got, "1/6")
+	if got := ListStatus(visible, "mapwright", ""); got != "1/8" {
+		t.Errorf("got %q, want %q", got, "1/8")
 	}
-	if got := ListStatus(visible, "oss", ""); got != "6/6" {
-		t.Errorf("got %q, want %q", got, "6/6")
+	if got := ListStatus(visible, "oss", ""); got != "8/8" {
+		t.Errorf("got %q, want %q", got, "8/8")
 	}
 	filtered := VisibleSections(c, "projects", "map", true)
 	if got := ListStatus(filtered, "mapwright", "map"); got != "1/2 filtered" {

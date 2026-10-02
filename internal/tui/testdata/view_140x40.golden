@@ -1,7 +1,7 @@
 ╭──────────────────────────────────────────╮ ╭─────────────────────────────────────────────────────────────────────────────────────────────╮
-│  D A V I D    F E T Z E R                │ │  role Software Engineer at C1 · Founder at Mapwright                                        │
+│  D A V I D    F E T Z E R                │ │  role Software Engineer at C1 · building osnova and Domovoi                                 │
 │  software engineer · boise, id · remote  │ │  status ● Open to interesting conversations                                                 │
-╰──────────────────────────────────────────╯ │  builds map servers · CLI tools · self-hosted platforms · hardware                          │
+╰──────────────────────────────────────────╯ │  builds agent tools · map servers · CLIs · self-hosted platforms · hardware                 │
                                              ╰─────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭──────────╮╭──────────╮╭──────╮╭─────────╮                                                                                                 
 │ ▌ readme ││ projects ││ work ││ contact │                                                                                                 
@@ -11,21 +11,21 @@
 │ ────────────────────── ││ David Fetzer                                                                                                   │
 │ › README.md            ││ software engineer · boise, id · remote                                                                         │
 │                        ││                                                                                                                │
-│                        ││ I build infrastructure — map servers, command-line tools, self-hosted platforms, and the hardware underneath   │
-│                        ││ them.                                                                                                          │
+│                        ││ I build infrastructure — tooling for AI coding agents, map servers, command-line tools, self-hosted platforms, │
+│                        ││ and the hardware underneath them.                                                                              │
 │                        ││                                                                                                                │
-│                        ││ Five independent projects carry this page: a self-hosted map server sold as a Mapbox alternative, a static Go  │
-│                        ││ binary for browserless file transfer, a private LLM and RAG platform on Kubernetes, a secure element board for │
-│                        ││ the Raspberry Pi, and a 3D-printing service that prices and fulfils uploaded parts.                            │
+│                        ││ Seven independent projects carry this page: a deterministic code map for AI coding agents, a local-first       │
+│                        ││ runner for those agents across machines, a self-hosted Mapbox alternative that was acquired in 2026, a static  │
+│                        ││ Go binary for browserless file transfer, a private LLM and RAG platform on Kubernetes, a secure element board  │
+│                        ││ for the Raspberry Pi, and a 3D-printing service that prices and fulfils uploaded parts.                        │
 │                        ││                                                                                                                │
 │                        ││ ────────────────────────────────────────────────────────────────────────────────────────────────────────────── │
 │                        ││ location           Boise, ID · remote                                                                          │
 │                        ││ ────────────────────────────────────────────────────────────────────────────────────────────────────────────── │
-│                        ││ role               Software Engineer at C1 · Founder at Mapwright                                              │
+│                        ││ role               Software Engineer at C1 · building osnova and Domovoi                                       │
 │                        ││ ────────────────────────────────────────────────────────────────────────────────────────────────────────────── │
 │                        ││ status             Open to interesting conversations                                                           │
 │                        ││ ────────────────────────────────────────────────────────────────────────────────────────────────────────────── │
-│                        ││                                                                                                                │
 │                        ││                                                                                                                │
 │                        ││                                                                                                                │
 │                        ││                                                                                                                │

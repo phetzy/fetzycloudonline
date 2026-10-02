@@ -1,9 +1,11 @@
 import { SECTIONS, TABS, type TabId } from './content'
 
-test('eleven sections in the documented order', () => {
+test('thirteen sections in the documented order', () => {
 	expect(SECTIONS.map((s) => s.id)).toEqual([
 		'readme',
 		'mapwright',
+		'osnova',
+		'domovoi',
 		'3dpass',
 		'transfer',
 		'platform',

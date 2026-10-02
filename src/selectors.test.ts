@@ -10,13 +10,19 @@ import { SECTIONS } from './content'
 test('with no filter, shows only the active tab', () => {
 	expect(visibleSections('projects', '', false).map((s) => s.id)).toEqual([
 		'mapwright',
+		'osnova',
+		'domovoi',
 		'3dpass',
 		'transfer',
 		'platform',
 		'hat',
 		'oss'
 	])
-	expect(visibleSections('work', '', false).map((s) => s.id)).toEqual(['c1', 'mapwright-work', 'stack'])
+	expect(visibleSections('work', '', false).map((s) => s.id)).toEqual([
+		'c1',
+		'mapwright-work',
+		'stack'
+	])
 })
 
 test('while the filter is open, searches every section regardless of tab', () => {
@@ -42,8 +48,8 @@ test('filter with no match returns nothing', () => {
 
 test('list status reports position and total', () => {
 	const visible = visibleSections('projects', '', false)
-	expect(listStatus(visible, 'mapwright', '')).toBe('1/6')
-	expect(listStatus(visible, 'oss', '')).toBe('6/6')
+	expect(listStatus(visible, 'mapwright', '')).toBe('1/8')
+	expect(listStatus(visible, 'oss', '')).toBe('8/8')
 })
 
 test('list status marks an active filter', () => {
